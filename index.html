@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>云澜·乾行 点灯系统</title>
+  <style>
+:root{
+  --navy:#1B365D;--navy-light:#2A4A7F;--gold:#C9A84C;--gold-light:#F5E6B8;
+  --blue-light:#E8F0FE;--gray-bg:#F7F8FA;--text:#333;--text-light:#666;
+  --card-shadow:0 2px 12px rgba(27,54,93,0.08);--radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f5f7fa;color:var(--text);}
+.header{background:linear-gradient(135deg,var(--navy),var(--navy-light));color:#fff;padding:20px;text-align:center;position:relative;overflow:hidden;}
+.header h1{font-size:24px;margin:12px 0 4px;}
+.header .sub{font-size:13px;opacity:0.9;margin-bottom:12px;}
+.header .badge{display:inline-block;background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:11px;margin-top:8px;}
+/* legacy tab-bar removed; using inner-tab-bar and role-select instead */
+.content-wrap{padding:12px;max-width:100%;}
+.light-card{background:#fff;border-radius:var(--radius);box-shadow:var(--card-shadow);margin:12px;overflow:hidden;border:2px solid transparent;transition:all 0.3s;}
+.light-card.all-done{border-color:var(--gold);background:linear-gradient(135deg,rgba(201,168,76,0.05),rgba(245,230,184,0.1));}
+.light-header{padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
+.light-bulb{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;transition:all 0.3s;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+.light-bulb.lit{box-shadow:0 0 16px var(--gold),0 2px 8px rgba(0,0,0,0.15);}
+.light-progress{flex:1;min-width:0;}
+.light-title{font-size:16px;font-weight:600;margin-bottom:8px;color:var(--text);}
+.light-prog-bar{height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;}
+.light-prog-fill{height:100%;transition:width 0.3s;}
+.light-count{font-size:13px;font-weight:600;min-width:40px;text-align:right;}
+.light-arrow{font-size:12px;margin-left:8px;transition:transform 0.3s;color:var(--text-light);}
+.light-card.open .light-arrow{transform:rotate(180deg);}
+.light-body{max-height:0;overflow:hidden;transition:max-height 0.3s ease;}
+.light-card.open .light-body{max-height:5000px;}
+.task-row{padding:12px 16px;border-top:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:12px;cursor:pointer;transition:background 0.2s;}
+.task-row:hover{background:#f9fafb;}
+.task-row.expanded{background:#f9fafb;}
+.task-check{width:24px;height:24px;border-radius:50%;border:2px solid #d1d5db;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;transition:all 0.3s;font-size:12px;font-weight:700;color:#fff;}
+.task-check:hover{border-color:#9ca3af;}
+.task-check.done{background:#10b981;border-color:#10b981;box-shadow:0 0 8px rgba(16,185,129,0.3);}
+.task-info{flex:1;min-width:0;}
+.task-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.task-sub{font-size:12px;color:var(--text-light);}
+.task-arrow{color:var(--text-light);font-size:12px;transition:transform 0.3s;margin-top:2px;}
+.task-row.expanded .task-arrow{transform:rotate(90deg);}
+.task-detail{display:none;padding:0;background:#F7F8FA;}
+.task-detail.show{display:block;}
+.step-card{background:#fff;margin:0 12px 12px;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(27,54,93,0.06);border-left:4px solid var(--navy);}
+.step-card+.step-card{margin-top:8px;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--navy);color:#fff;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0;}
+.step-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;}
+.step-desc{font-size:13px;line-height:1.7;color:var(--text);margin-bottom:12px;padding-left:0;}
+.info-row{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0;}
+.tag{display:inline-block;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;white-space:nowrap;}
+.tag-time{background:#FEF3C7;color:#D97706;}
+.tag-person{background:#DBEAFE;color:#0284C7;}
+.tag-warn{background:#FECACA;color:#DC2626;}
+.tag-tip{background:#DBEAFE;color:#0284C7;}
+.material-box{background:#F9FAFB;border-radius:10px;padding:12px;margin:10px 0;border:1px solid #E5E8ED;}
+.mb-title{font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;gap:4px;}
+.material-item{font-size:12px;color:var(--text);padding:3px 0;line-height:1.7;}
+.material-item:empty{height:4px;}
+.mini-table{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0;border-radius:8px;overflow:hidden;border:1px solid #E5E8ED;}
+.mini-table th{background:var(--navy);color:#fff;padding:10px 8px;text-align:left;font-weight:600;font-size:11px;}
+.mini-table td{padding:9px 8px;border-bottom:1px solid #E5E8ED;font-size:12px;}
+.mini-table tr:last-child td{border-bottom:none;}
+.mini-table tr:hover td{background:#F7F8FA;}
+.contact-card{display:flex;align-items:center;gap:10px;background:#F9FAFB;border-radius:10px;padding:12px;margin:8px 0;border:1px solid #E5E8ED;}
+.contact-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.contact-info{flex:1;}
+.contact-name{font-size:14px;font-weight:600;color:var(--navy);}
+.contact-role{font-size:12px;color:var(--text-light);}
+.copy-box{background:#F7F8FA;border:1.5px dashed var(--gold);border-radius:12px;padding:14px;margin:10px 0;font-size:12px;color:#333;white-space:pre-wrap;line-height:1.8;user-select:text;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;}
+.btn-copy{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin:10px 0;padding:11px;border:1.5px solid var(--navy);border-radius:10px;background:#fff;color:var(--navy);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-copy:active{background:var(--navy);color:#fff;transform:scale(.97);}
+.btn-copy.copied{background:#10B981;color:#fff;border-color:#10B981;}
+.callout{background:#F0FDF4;border-left:3px solid #10B981;border-radius:8px;padding:12px;margin:10px 0;font-size:12px;color:var(--text);line-height:1.6;}
+.file-link{display:flex;align-items:center;gap:10px;background:var(--blue-light);border-radius:10px;padding:12px;margin:10px 0;cursor:pointer;font-size:12px;color:var(--navy);transition:all .2s;}
+.file-link:active{opacity:.8;}
+.file-link .fp-icon{font-size:16px;flex-shrink:0;}
+.file-link .fp-text{flex:1;}
+.file-link .fp-label{display:block;font-weight:600;margin-bottom:2px;}
+.file-link .fp-path{display:block;font-size:11px;color:var(--text-light);}
+.wiki-wrap{padding:12px;}
+.wiki-card{background:#fff;border-radius:var(--radius);box-shadow:var(--card-shadow);margin:12px;overflow:hidden;}
+.wiki-card.all-done{border:2px solid var(--gold);}
+.wiki-header{padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;background:linear-gradient(135deg,rgba(59,130,246,0.05),rgba(59,130,246,0.02));}
+.wiki-icon{font-size:24px;}
+.wiki-title{flex:1;font-weight:600;color:var(--text);}
+.wiki-arrow{font-size:12px;transition:transform 0.3s;}
+.wiki-card.open .wiki-arrow{transform:rotate(180deg);}
+.wiki-body{max-height:0;overflow:hidden;transition:max-height 0.3s;}
+.wiki-card.open .wiki-body{max-height:5000px;}
+.wiki-step{padding:16px;border-top:1px solid #f3f4f6;}
+.reg-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px;}
+.reg-card{background:#fff;border-radius:var(--radius);padding:24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);}
+.reg-card h2{color:var(--navy);margin-bottom:8px;}
+.reg-sub{font-size:13px;color:var(--text-light);margin-bottom:16px;line-height:1.6;}
+.reg-input,.reg-select{width:100%;padding:12px;margin-bottom:12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;}
+.reg-input:focus,.reg-select:focus{outline:none;border-color:var(--navy);box-shadow:0 0 0 3px rgba(27,54,93,0.1);}
+.reg-btn{width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;transition:background 0.3s;font-size:14px;}
+.reg-btn:hover{background:var(--navy-light);}
+.sync-badge{position:fixed;bottom:20px;right:20px;background:#fff;border-radius:20px;padding:10px 16px;box-shadow:0 4px 12px rgba(0,0,0,0.15);display:none;align-items:center;gap:8px;font-size:12px;z-index:999;}
+.sync-badge.syncing{color:#f59e0b;}
+.sync-badge.error{color:#ef4444;}
+.sync-badge::before{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;}
+.sync-badge.syncing::before{animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.doc-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.doc-content{background:#fff;border-radius:var(--radius);padding:24px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;}
+.doc-close{position:absolute;top:12px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:var(--text-light);}
+.img-viewer{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.9);z-index:600;align-items:center;justify-content:center;}
+.img-viewer img{max-width:90%;max-height:90%;}
+.role-select{padding:20px 16px;text-align:center;}
+.role-select-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.role-select-sub{font-size:13px;color:var(--text-light);margin-bottom:20px;line-height:1.6;}
+.role-cards{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;max-width:500px;margin:0 auto;}
+.role-card{flex:1;min-width:140px;max-width:220px;background:#fff;border-radius:var(--radius);box-shadow:var(--card-shadow);padding:24px 16px;cursor:pointer;transition:all 0.3s;border:2px solid transparent;text-align:center;}
+.role-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(27,54,93,0.15);}
+.role-card:active{transform:scale(0.97);}
+.role-card.selected{border-color:var(--navy);background:var(--blue-light);}
+.role-card .rc-icon{font-size:48px;margin-bottom:12px;display:block;}
+.role-card .rc-title{font-size:18px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.role-card .rc-desc{font-size:12px;color:var(--text-light);line-height:1.5;}
+.role-card .rc-badge{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:12px;font-size:11px;font-weight:600;}
+.role-badge-ifa{background:#DBEAFE;color:#1D4ED8;}
+.role-badge-tr{background:#F3E8FF;color:#7C3AED;}
+.inner-tab-bar{display:flex;gap:0;background:#fff;border-bottom:1px solid #e5e7eb;padding:0 12px;position:sticky;top:0;z-index:100;}
+.inner-tab-item{flex:1;padding:12px;text-align:center;cursor:pointer;border-bottom:3px solid transparent;font-size:14px;font-weight:500;color:var(--text-light);transition:all 0.3s;}
+.inner-tab-item.active{color:var(--navy);border-bottom-color:var(--navy);}
+.role-back{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:6px 12px;border-radius:20px;font-size:12px;cursor:pointer;position:absolute;top:16px;left:16px;z-index:10;transition:all 0.2s;}
+.role-back:active{background:rgba(255,255,255,0.4);}
+.sos-btn{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;background:rgba(220,38,38,0.9);border:2px solid rgba(255,255,255,0.5);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;z-index:10;box-shadow:0 2px 12px rgba(220,38,38,0.4);transition:all 0.2s;animation:sosPulse 2s infinite;}
+.sos-btn:active{transform:scale(0.92);}
+@keyframes sosPulse{0%,100%{box-shadow:0 2px 12px rgba(220,38,38,0.4);}50%{box-shadow:0 2px 20px rgba(220,38,38,0.7);}}
+.sos-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1100;padding:0;overflow-y:auto;}
+.sos-modal.show{display:block;}
+.sos-modal-inner{background:#fff;min-height:100%;padding:0;}
+.sos-modal-header{background:linear-gradient(135deg,#DC2626,#EF4444);color:#fff;padding:16px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+.sos-modal-header h2{flex:1;font-size:18px;margin:0;}
+.sos-close{background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.sos-close:active{background:rgba(255,255,255,0.4);}
+.sos-section{padding:16px;}
+.sos-section-title{font-size:15px;font-weight:700;color:#DC2626;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.sos-table{width:100%;border-collapse:collapse;font-size:12px;border:1px solid #fecaca;border-radius:10px;overflow:hidden;}
+.sos-table th{background:#DC2626;color:#fff;padding:10px 8px;text-align:left;font-size:11px;font-weight:600;}
+.sos-table td{padding:9px 8px;border-bottom:1px solid #fecaca;font-size:12px;}
+.sos-table tr:last-child td{border-bottom:none;}
+.sos-table tr:nth-child(even) td{background:#FEF2F2;}
+.sos-card{background:#FEF2F2;border-radius:10px;padding:14px;margin:10px 0;border-left:3px solid #DC2626;}
+.sos-card-title{font-size:13px;font-weight:700;color:#DC2626;margin-bottom:6px;}
+.sos-card-body{font-size:12px;color:#333;line-height:1.7;}
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header" id="mainHeader">
+  <div class="role-back" id="roleBackBtn" onclick="goBackToRoleSelect()" style="display:none">← 切换角色</div>
+  <div class="sos-btn" onclick="openSOS()" title="紧急求助">🆘</div>
+  <h1 id="headerTitle">云澜·乾行 点灯系统</h1>
+  <div class="sub" id="headerSub">从入职到展业，每一步清晰可查</div>
+  <span class="badge">云澜·乾行</span>
+</div>
+
+<!-- SOS 紧急求助浮层 -->
+<div class="sos-modal" id="sosModal">
+  <div class="sos-modal-inner">
+    <div class="sos-modal-header">
+      <span style="font-size:24px">🆘</span>
+      <h2>紧急求助指南</h2>
+      <button class="sos-close" onclick="closeSOS()">✕</button>
+    </div>
+    <div class="sos-section">
+      <div class="sos-section-title">📋 遇到问题找谁？</div>
+      <table class="sos-table">
+        <thead><tr><th>你遇到的问题</th><th>找谁</th><th>怎么找</th></tr></thead>
+        <tbody>
+          <tr><td>入职资料不齐/不确定</td><td><b>云妹</b>(云澜) 或 <b>乾乾</b>(乾行)</td><td>个人服务群@</td></tr>
+          <tr><td>挂牌进度/上牌问题</td><td><b>Summer / Tiya</b></td><td>上牌服务群@</td></tr>
+          <tr><td>保司Code没开通/登不上</td><td><b>Anna / Ling</b></td><td>个人服务群@</td></tr>
+          <tr><td>签单流程不懂/第一次签单</td><td><b>Bobo / Ray</b></td><td>签单群@</td></tr>
+          <tr><td>签单当天需要CS协助</td><td><b>Sherry / Sharon</b></td><td>签单群@预约</td></tr>
+          <tr><td>签单后Pending怎么处理</td><td><b>Sherman / Alfred</b></td><td>签单群@</td></tr>
+          <tr><td>保费对账问题</td><td><b>Carmen</b></td><td>签单群@</td></tr>
+          <tr><td>佣金工资单有疑问</td><td>先找<b>乾乾/云妹</b></td><td>回复邮件抄送</td></tr>
+          <tr><td>续保/保全/理赔</td><td><b>胖丁</b>(续保) / <b>三牧老师</b>(理赔)</td><td>个人服务群@</td></tr>
+          <tr><td>工具/权限开不了</td><td>先找<b>乾乾/云妹</b></td><td>个人服务群@</td></tr>
+          <tr><td>什么都不知道找谁</td><td><b>@ZEUS-GPT</b></td><td>企微智能客服群</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sos-section">
+      <div class="sos-section-title">🔴 常见卡点急救</div>
+      <div class="sos-card">
+        <div class="sos-card-title">卡点1：保司Code收到密码但登不上</div>
+        <div class="sos-card-body">→ 检查是否用了ZUU公司邮箱（非个人邮箱）<br>→ 立桥初始密码 PASe2022! 区分大小写<br>→ 超时锁定 → 联系Anna/Ling重置</div>
+      </div>
+      <div class="sos-card">
+        <div class="sos-card-title">卡点2：签单前发现Code还没开通</div>
+        <div class="sos-card-body">→ 紧急可用公司商号先签<br>→ 签单群@Anna说明情况</div>
+      </div>
+      <div class="sos-card">
+        <div class="sos-card-title">卡点3：客户已到但签单群还没建</div>
+        <div class="sos-card-body">→ 直接电话联系乾乾/云妹<br>→ 说明"客户已到现场"，乾乾紧急建群</div>
+      </div>
+      <div class="sos-card">
+        <div class="sos-card-title">卡点4：周末签单找不到人</div>
+        <div class="sos-card-body">→ 乾乾周末轮班：11:00 / 16:00 / 20:00<br>→ 当天签单1小时回复，第二天3小时回复<br>→ 联系不上 → 找师父或区伙</div>
+      </div>
+    </div>
+    <div style="padding:12px 16px 24px;text-align:center;">
+      <div style="background:#FEF3C7;border-radius:10px;padding:14px;font-size:13px;color:#92400E;line-height:1.6;">
+        💡 <b>核心原则</b>：任何问题先在「个人直营服务群」问乾乾/云妹，他们会帮你对接正确的人。千万不要自己直接联系ZUU总部。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Role Selection Page -->
+<div id="roleSelectPage" class="role-select">
+  <div class="role-select-title">选择你的身份</div>
+  <div class="role-select-sub">IFA和转介人的入职流程不同，请先选择你的身份<br>选择后可随时切换</div>
+  <div class="role-cards">
+    <div class="role-card" onclick="selectRole('ifa')">
+      <span class="rc-icon">🏛️</span>
+      <div class="rc-title">IFA 持牌顾问</div>
+      <div class="rc-desc">需要考试拿牌照，有自己的保司账号，独立签单展业</div>
+      <span class="rc-badge role-badge-ifa">需考牌 · 完整流程</span>
+    </div>
+    <div class="role-card" onclick="selectRole('tr')">
+      <span class="rc-icon">🤝</span>
+      <div class="rc-title">转介人 TR</div>
+      <div class="rc-desc">不用考试，把客户介绍过来由团队协助签单，可以日后再考牌转正</div>
+      <span class="rc-badge role-badge-tr">免考牌 · 快速上手</span>
+    </div>
+  </div>
+  <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--text-light);line-height:1.6;">
+    <b>不确定选哪个？</b> 问你的团队主管（云澜找云妹，乾行找乾乾）。<br>选错了也没关系，随时可以切换查看。
+  </div>
+</div>
+
+<!-- Inner Tab Bar (shown after role selection) -->
+<div class="inner-tab-bar" id="innerTabBar" style="display:none">
+  <div class="inner-tab-item active" id="innerTabFlow" onclick="switchInnerTab('flow')">📋 流程指引</div>
+  <div class="inner-tab-item" id="innerTabWiki" onclick="switchInnerTab('wiki')">📖 百科全书</div>
+</div>
+
+<!-- Flow Content (IFA or TR depending on role) -->
+<div id="contentFlow" style="display:none">
+  <div class="content-wrap" id="flowLights"></div>
+</div>
+
+<!-- Wiki Content -->
+<div class="wiki-wrap" id="contentWiki" style="display:none"></div>
+
+<!-- Registration Modal -->
+<div class="reg-overlay" id="regModal">
+  <div class="reg-card">
+    <h2>👋 欢迎使用点灯系统</h2>
+    <p class="reg-sub">首次使用请填写你的信息，<br>进度将自动同步给团队主管</p>
+    <input class="reg-input" id="regName" placeholder="请输入你的姓名" maxlength="20">
+    <input class="reg-input" id="regPhone" placeholder="请输入手机号" maxlength="15" type="tel">
+    <select class="reg-select" id="regTeam">
+      <option value="">选择所属团队</option>
+      <option value="云澜">云澜团队</option>
+      <option value="乾行">乾行团队</option>
+    </select>
+    <button class="reg-btn" id="regBtn" onclick="submitReg()">确认并开始</button>
+    <div style="margin-top:12px"><a href="javascript:void(0)" onclick="skipReg()" style="font-size:12px;color:#999;text-decoration:underline">暂时跳过，离线使用</a></div>
+  </div>
+</div>
+
+<!-- Sync Badge -->
+<div class="sync-badge" id="syncBadge">
+  <span id="syncText">已同步</span>
+</div>
+
+<script>
+// ========== IFA 数据 ==========
+const IFA_LIGHTS = [
+  {
+    id: 'first_week',
+    icon: '🌟',
+    title: '新人第一周必做（先看这里）',
+    color: '#10B981',
+    tasks: [
+      {
+        id: 'week1_overview',
+        title: '你的入职全流程总览',
+        subtitle: '先看大图：从入职到独立签单要多久？',
+        steps: [
+          {
+            title: '入职全流程时间轴',
+            desc: '以下是从0到独立展业的完整时间线，帮你心里有数。',
+            table: {
+              headers: ['阶段', '内容', '预计时间', '优先级'],
+              rows: [['第1周', '准备入职资料 + 报名考试 + 开始刷题', '7天', '🔴 立刻做'],['第2-3周', '参加考试 + 联系主管安排区伙面谈', '1-2周', '🔴 紧接着'],['面谈通过后', '提交全部入职材料 → 签署ZUU合约', '3-5天', '🔴 面谈后立刻做'],['签约后4-8周', '等待挂牌审批（背调+保监审批）+ 同步培训', '4-8周', '🟡 等待期间学习'],['挂牌后第1周', '行政开通所有权限和工具 + 开各保司Code', '1周起', '🔴 收到通知立刻操作'],['挂牌后第2-4周', '完成各保司培训（AIA i学院、AXA IPOS等）', '2-4周', '🟡 按需完成'],['准备好后', '提交第一单意向投保申请 → 正式签单', '—', '🟢 水到渠成']]
+            },
+            callout: '整个流程大约2-3个月。等待挂牌的4-8周不要闲着，这是学习的黄金期！'
+          }
+        ]
+      },
+      {
+        id: 'week1_checklist',
+        title: '第一周7件事',
+        subtitle: '按顺序做完这7件事，你就入门了',
+        steps: [
+          {
+            title: '第一周必做清单（按顺序）',
+            desc: '不要被那么多信息吓到，第一周只需要做好这7件事。',
+            tags: [{type: 'warn', text: '⚠️ 按顺序逐一完成'}],
+            materials: ['✅ 第1天：联系你的团队主管（云澜找云妹，乾行找乾乾），确认入职流程','✅ 第1天：在百科全书里读完「术语小词典」，搞懂基本术语','✅ 第2天：开始准备入职材料（详见「入职资料准备」小灯）','✅ 第2天：微信搜索「资通未来」小程序注册，提交信息给团队助理开通刷题权限','✅ 第3天：去VTC官网(www.vtc.edu.hk/iro)报名保险中介人资格考试','✅ 第3天：跟团队主管确认区伙面谈时间（面谈通过才能签合约）','✅ 第4-7天：每天刷题备考（资通未来小程序），同时继续准备入职资料','✅ 第7天：确认入职材料是否齐全，缺什么赶紧补'],
+            callout: '核心原则：有任何不懂的，第一时间在你的服务群问乾乾/云妹。不要自己闷头猜。'
+          }
+        ]
+      },
+      {
+        id: 'week1_mentor',
+        title: '认识你的支持网络',
+        subtitle: '这些人会帮你一路走过来',
+        steps: [
+          {
+            title: '你的三层支持体系',
+            desc: '从入职到展业，你不是一个人在战斗。',
+            table: {
+              headers: ['角色', '谁', '帮你做什么'],
+              rows: [['团队主管', '云妹(云澜) / 乾乾(乾行)', '入职全程对接、签单协调、佣金核查、日常问题'],['你的师父', '入职时指定', '一对一业务带教、产品学习、签单辅导'],['区伙（区域合伙人）', '团队高级管理层', '面谈审核、团队战略指导']]
+            },
+            callout: '入职第一天就要知道你的师父是谁。师父是你最直接的业务导师，有问题先问师父。'
+          },
+          {
+            title: '你会加入的群组',
+            desc: '入职后会陆续加入这些群，每个群有不同用途。',
+            materials: ['📱 第一批（入职时加入）：','• 个人直营服务群 — 你和团队主管+行政的专属群，所有日常沟通都在这里','• ZUU家办直营准新人答疑群 — 入职前的答疑群','','📱 第二批（挂牌后加入）：','• 直营圆桌会群 — 所有已上牌顾问的运营群','• 团队内部群 — 你所在团队的交流群','• 各保司群 — 可咨询保司RM（客户经理）获取产品信息','• 企微智能客服群 — @ZEUS-GPT自动回答常见问题']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'onboard',
+    icon: '🏛️',
+    title: '入职流程',
+    color: '#3B82F6',
+    tasks: [
+      {
+        id: 'exam',
+        title: '考牌准备',
+        subtitle: '保险中介人资格考试',
+        steps: [
+          {
+            title: '报考保险中介人资格考试',
+            desc: '保险从业者入行必须参加保险中介人资格考试。',
+            tags: [{type: 'time', text: '卷一/卷三 同时挂牌'}],
+            materials: ['必考科目：从业型（A类型）考试', '卷一：保险原理及实务', '卷三：两者取一（长期保险 或 一般保险）', '1号&3号牌强制要求同时申请'],
+            callout: '报考费265元/门'
+          },
+          {
+            title: '资通未来刷题备考',
+            desc: '微信搜索「资通未来」小程序，完成注册后提交信息给团队助理开通权限。',
+            tags: [{type: 'tip', text: '推荐工具'}, {type: 'warn', text: '⚠️ 名额有限'}],
+            contacts: [{name: '资通未来备考小程序', role: '微信搜索「资通未来」', avatar: '📱', color: '#EBF5FF'}, {name: 'Sharon', role: '权限开通负责人', avatar: '👩‍💼', color: '#F3E8FF'}],
+            materials: ['📋 申请流程：', '① 微信搜索「资通未来」小程序', '② 按指引完成账号注册', '③ 将注册信息提交给团队助理', '④ 团队助理汇总后统一提交Sharon开通', '', '⚠️ 核心规则（务必注意）：', '使用对象：确认加入团队的准招募', '限时开放：仅周一、周四收集名单，截止当日下午5:00', '限量免费：每月50个免费名额，先到先得', '超额或非开放时间申请 = 收费名额（可小程序内直接付费）', '公司采购价，低于市场价'],
+            callout: '务必在每周一或周四下午5点前向团队助理提交信息，以免产生额外费用！'
+          },
+          {
+            title: '报考与领证',
+            desc: '通过VTC在网上报名系统或亲临考试中心登记报考。',
+            materials: ['预约渠道：VTC网上报名', '确认考试安排', '成绩确认', '提供考试成绩通知书'],
+            file: {label: '报考网址', path: 'www.vtc.edu.hk/iro 网上报名系统'}
+          }
+        ]
+      },
+      {
+        id: 'materials',
+        title: '入职资料准备',
+        subtitle: '收集并提交全部入职材料',
+        steps: [
+          {
+            title: '准备入职必备材料',
+            desc: '以下材料缺一不可，请提前准备齐全。先联系你的团队主管（云澜找云妹/乾行找乾乾），由主管安排区伙（区域合伙人）面谈，面谈通过后才进入文件签署流程。',
+            tags: [{type: 'person', text: '📌 对接：团队主管 → 区伙面谈 → ZUU牌照组'}],
+            table: {
+              headers: ['序号', '资料项', '要求说明'],
+              rows: [['①', '香港身份证', '正反面'], ['②', '学历资料', '由学校或有效机构发出的学历证明原件。内地学历须海牙/WES认证（WES=World Education Services，国际学历认证机构，认证需4-6周，建议提前办理）'], ['③', '考试成绩通知书', '保险中介人资格考试（卷一+卷三）'], ['④', '个人履历', '中英文简历'], ['⑤', '就业证据文件', '劳动合同/离职证明/在职证明/商业登记证（任一）'], ['⑥', '香港住址证据', '最近3个月：水电煤/政府信件/银行信件等'], ['⑦', '银行月结单', '最近3个月'], ['⑧', '联络方式', '香港电话号码 + 邮箱'], ['⑨', '工作证明补充', '强积金供款纪录/税务报表/公司信/转账纪录等（如适用）'], ['⑩', 'S1表格', '保险顾问申请表（签字版）| 下载：企微→微盘→资遇行政指引→1.挂牌→保险牌照上牌']]
+            },
+            callout: '特别注意：工作证据除了劳动合同外，还可能需要补充强积金供款纪录、税务报表等作为佐证'
+          },
+          {
+            title: '首次申请永居者额外材料',
+            desc: '如果近期首次申请香港永久居留，需额外提供以下资料。',
+            tags: [{type: 'warn', text: '非永居必看'}],
+            materials: ['有效旅行证件（护照）', '有效逗留签证 & 首次入境小白条', '在读学签（如适用）']
+          }
+        ]
+      },
+      {
+        id: 'contract',
+        title: '签署合约',
+        subtitle: '办理入职 → 预约签约 → 进入审批',
+        steps: [
+          {
+            title: '办理入职',
+            desc: '面谈通过后，由你所属团队的主管负责对接ZUU拉入职跟进群。云澜团队找云妹，乾行团队找乾乾。',
+            tags: [{type: 'person', text: '📌 各团队主管 → ZUU行政(Emma/Summer)'}],
+            contacts: [{name: '云妹', role: '云澜团队主管 · 人力与设计', avatar: '👩', color: '#F3E8FF'}, {name: '乾乾', role: '乾行团队主管 · 人力与保单', avatar: '👩‍💼', color: '#EBF5FF'}]
+          },
+          {
+            title: '预约签约',
+            desc: 'ZUU行政安排合约签署时间和地点。',
+            tags: [{type: 'person', text: '📌 ZUU行政'}]
+          },
+          {
+            title: '签署ZUU入职合约',
+            desc: '完成入职合约签署，签署后IA系统会显示缴费页面。',
+            tags: [{type: 'time', text: '合约签署1天'}],
+            file: {label: '合约模版位置', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 2.入职 → 中英文合约模版'}
+          }
+        ]
+      },
+      {
+        id: 'license',
+        title: '正式挂牌审批',
+        subtitle: '从入群到IA审核，共8步',
+        steps: [
+          {
+            title: '挂牌审批8步流程',
+            desc: '1号&3号牌强制同时申请，2号&5号牌可选申请或后期补挂。',
+            tags: [{type: 'time', text: '整体约 14-30+ 工作日'}],
+            table: {
+              headers: ['步骤', '内容', '处理时效'],
+              rows: [['①', '顾问入群', '1个工作日'], ['②', '资料审批', '1个工作日'], ['③', '签署合约', '1-2个工作日'], ['④', '创建账号（一站通）', '1-2个工作日'], ['⑤', '一站通公司审核', '5-7个工作日'], ['⑥', '一站通公司委托', '3个工作日'], ['⑦', '顾问登录一站通缴费', '即时'], ['⑧', '一站通IA审核', '1-2周']]
+            }
+          },
+          {
+            title: '背景调查',
+            desc: 'ZUU委托第三方机构进行背景调查，核实个人资料及从业记录。',
+            tags: [{type: 'time', text: '背调约15天'}, {type: 'person', text: '📌 ZUU牌照组'}],
+            materials: ['背调内容：身份核实、学历核实、工作经历、信用记录等', '背调期间可能会联系你核实信息，请保持电话畅通', '如有特殊情况（如工作经历空白期）可提前告知'],
+            callout: '在等待挂牌期间，你已经可以开始参加培训课程了！'
+          },
+          {
+            title: 'IA缴费 & 保监审批',
+            desc: '在IA网站完成上牌缴费（约600港币），之后等待香港保监局审批。',
+            tags: [{type: 'time', text: '保监审批 14-30天，无法催促'}, {type: 'person', text: '📌 ZUU牌照(Kimi/Summer)'}],
+            callout: 'IA审批通过后，你将获得终身不变的 IFA Code（个人顾问代码）'
+          },
+          {
+            title: '📌 附录：补挂2、5号牌（可选，挂牌后再考虑）',
+            desc: '这不是入职必做步骤。已成功挂1、3号牌后，如有需要可补挂2号牌或5号牌。',
+            materials: ['① 提交2、5号牌补挂牌申请', '② 确认缴费（约$0补挂费，显示为$140审查费）', '③ 确认成功挂牌（提交后约14天后生效）']
+          },
+          {
+            title: '📌 附录：补挂4号牌/MPF牌（可选，按需申请）',
+            desc: '这不是入职必做步骤。如未来需开展强积金业务，可额外申请4号牌。',
+            tags: [{type: 'time', text: '首次约1个月 / 已有牌约3个工作日'}],
+            materials: ['① 填写《强积金挂牌申请表格》', '② 在强积金网站缴费', '③ 费用：新考牌挂牌年费180港币；已有牌挂牌130港币', '④ 表格正本连同缴费支票交到公司，由公司交积金局审核'],
+            file: {label: '申请表格', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 挂牌 → 强积金挂牌申请表格'}
+          },
+          {
+            title: '📌 附录：准招募保护机制（了解即可，非入职必做）',
+            desc: '这是团队管理规则，了解即可。建上牌服务群后，由准招募本人自报所属上线即启动保护。',
+            tags: [{type: 'tip', text: '📖 背景知识'}],
+            materials: ['确定准招募意向并建上牌服务群后启动保护', '必须由准招募本人自报所属上线', '如要更换上线，须渡过冷静期（3个月，从解散原服务群日起计）', '冷静期结束后可再次申请挂牌其他团队']
+          },
+          {
+            title: '📌 附录：二次入司机制（了解即可，非入职必做）',
+            desc: '这是团队管理规则，了解即可。持牌人如想更换团队，须除牌后办理二次入司。',
+            materials: ['持牌人须先除牌', '冷静期：6个月（从提交除牌日起计）', '冷静期结束后方可加入其他团队', '重新走入职流程（资料/背调/上牌）']
+          }
+        ]
+      },
+      {
+        id: 'onboarding_kit',
+        title: '入职大礼包',
+        subtitle: '上牌后权限配置（共9项）',
+        steps: [
+          {
+            title: '权限配置清单',
+            desc: '上牌成功后，行政会协助开通以下全部权限和工具。',
+            tags: [{type: 'person', text: '📌 ZUU行政(Ling) 开通'}],
+            table: {
+              headers: ['工具/权限', '说明'],
+              rows: [['ZUU名片', 'Broker电子名片，对外展示独立持牌顾问身份'], ['ZUU企业微信', '内部沟通、精算帮、保司日历表、资通未来备考小程序'], ['ZUU邮箱', '⚠️ 开Code必备邮箱，接收各保司账号及账单、申请CPD'], ['ZUU Life B(LB)', '集产品中心、智能方案、产品知识库于一体'], ['前进四企微 & 小程序', '前进四=前进保险集团旗下科技公司。包含资料库、PoeS计划书制作。由团队主管对接丝妹（前进四对接人）开通'], ['蓝宝书(ZXcel)', '合规版产品数据工具，一页数据海报'], ['各保司Code', '在各保险公司系统的个人账号（详见下一步）'], ['前进四微盘', '各保司产品资料、行政指引'], ['家办合伙人名片', '家办电子名片']]
+            },
+            file: {label: '入职大礼包指引', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 2.入职 → ZUU直营新人一页通'}
+          }
+        ]
+      },
+      {
+        id: 'insurance_codes',
+        title: '保司Code开通',
+        subtitle: '各家保险公司账号开通（共10家）',
+        steps: [
+          {
+            title: '总览：开Code流程',
+            desc: '上牌后，行政部将于启动公司邮箱后一周内陆续为你创建各保司账号。保司初始密码发送至你的ZUU公司邮箱，密码有时效性，超时未登录需重置密码。',
+            tags: [{type: 'person', text: '📌 ZUU行政(Ling) 协助'},{type: 'warn', text: '⚠️ 收到密码后尽快登录'}],
+            table: {
+              headers: ['保司', '开通时效', '特别注意'],
+              rows: [['友邦(AIA)','3个工作日','签内地单须先完成i学院测试'],['中国人寿','3个工作日','邮箱收到通知即可登录'],['立桥','3个工作日','初始密码PASe2022! 7天内必须登录'],['宏利','7个工作日','邮箱收到通知'],['保诚','3-4周','审批较长，请耐心等待'],['太保','视情况','需个人网站发起申请'],['万通','约2周','需预填7项资料+2份表格'],['安盛(AXA)','培训后3周','需先完成IPOS课程+考试'],['周大福','按需','签单前2个工作日通知团队长'],['恒安标准','较长','保司每月固定时间开通']]
+            },
+            callout: '初始密码发至你的ZUU公司邮箱，务必及时查收并登录，超时需重置。'
+          },
+          {
+            title: '友邦 AIA 开通指引',
+            desc: '行政创建后，你的INS邮箱会收到激活通知邮件，点击链接设置密码即可。',
+            tags: [{type: 'time', text: '3个工作日'}],
+            materials: ['① 行政创建账号（上牌后自动进行）','② 在你的INS邮箱中查收激活邮件','③ 点击激活链接，设置你自己的密码','④ 如果没收到邮件，使用默认用户名登录：','','📋 默认用户名格式：','• 标准格式：36817-名（大写拼音）_姓（大写拼音）','• 例如：36817-JIELUN_ZHOU','• 两字名（重名率高）：36817-姓名_姓','• 例如：36817-CHENGLONG_CHENG','• 不确定格式 → 在服务群咨询','','⚠️ 签内地单必须先完成测试：','电子服务 > i学院 > 网上学习 > 抵港内地人士相关课程 > 【全新】','（100%正确率才能通过）'],
+            callout: '登录网址：aia.com.hk/agent | 签内地单前务必先完成i学院课程测试！'
+          },
+          {
+            title: '中国人寿开通指引',
+            desc: '行政创建后，你的ZUU公司邮箱会收到登录通知。',
+            tags: [{type: 'time', text: '3个工作日'}],
+            materials: ['① 行政创建账号','② 在公司邮箱收到登录通知','③ 按通知中的链接和账号密码登录'],
+            callout: '登录网址：clio.chinalife.com.hk'
+          },
+          {
+            title: '立桥 Well Link 开通指引',
+            desc: '默认使用你的zuuins邮箱作为用户名，初始密码统一为PASe2022!，7天内必须登录否则账号锁定。',
+            tags: [{type: 'time', text: '3个工作日'},{type: 'warn', text: '⚠️ 7天内必须登录'}],
+            materials: ['① 行政创建账号（上牌后自动进行）','② 用户名：你的zuuins邮箱','③ 初始密码：PASe2022!','④ 首次登录后立即修改密码','','⚠️ 重要：7天内未登录，账号将锁定，需联系行政重置'],
+            callout: '登录网址：ecos.well-link.com.hk | 收到通知后立刻登录，不要拖延！'
+          },
+          {
+            title: '宏利 Manulife 开通指引',
+            desc: '行政创建后，你的ZUU公司邮箱会收到登录通知，处理时间较长约7个工作日。',
+            tags: [{type: 'time', text: '7个工作日'}],
+            materials: ['① 行政创建账号','② 在公司邮箱收到登录通知（约7个工作日）','③ 按通知中的链接和账号密码登录','④ 首次登录后修改密码'],
+            callout: '登录网址：manulife.com.hk/agent'
+          },
+          {
+            title: '保诚 Prudential 开通指引',
+            desc: '保诚审批时间最长，提交申请后约3-4周才能收到邮件通知。',
+            tags: [{type: 'time', text: '3-4周'},{type: 'warn', text: '⚠️ 审批最慢'}],
+            materials: ['① 行政在7天内提交申请','② 保诚审批处理（约3-4周）','③ 审批通过后在公司邮箱收到登录通知','④ 按通知登录并设置密码','','💡 因审批时间长，建议上牌后尽早申请，避免有单时没有Code'],
+            callout: '登录网址：prudential.com.hk/agent | 审批需3-4周，无法加急'
+          },
+          {
+            title: '太保 CPIC 开通指引',
+            desc: '太保需要你个人在网站发起申请，行政无法代为创建。',
+            tags: [{type: 'person', text: '📌 需个人操作'}],
+            materials: ['① 前往太保网站：nsp.cpiclifehk.com.hk','② 选择「Advisor Login」','③ 按页面指引发起个人账号申请','④ 申请后在服务群通知团队长/团队长秘书','⑤ 等待太保审批'],
+            callout: '登录网址：https://nsp.cpiclifehk.com.hk/#/web/advisorlogin'
+          },
+          {
+            title: '万通 YF Life 开通指引',
+            desc: '万通开通最复杂，需预先填写7项个人资料+签署2份表格，统一发至指定邮箱。',
+            tags: [{type: 'time', text: '约2周'},{type: 'warn', text: '⚠️ 需提前准备表格'}],
+            materials: ['📋 需填写7项资料：','❶ 姓名中英文（须与身份证一致）','❷ 香港身份证号码','❸ 保监牌照号码','❹ 香港电话号码','❺ 是否有亲属在万通任职','❻ 是否曾被保监协会处罚','❼ INS公司电邮地址','','📄 需签署2份表格：','① YF - TR individual account application form','② YF - PRC Acknowledgment（销售予中国内地居民指引确认表）','','📋 表格填写要点：','• 公司名称：ZUU INSURANCE BROKERAGE LIMITED','• 公司编号：99846','• 正楷填写，须签名+公司盖章','','📤 提交方式：','将7项资料 + 2份签名表格一并发至：ling.chung@zuuins.com.hk','行政收到后统一发给万通处理'],
+            callout: '表格可在企微微盘下载：资遇行政指引 → 4.保司账号开通 → 万通账号申请',
+            file: {label: '万通申请表格', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 4.保司账号开通 → 万通账号申请'}
+          },
+          {
+            title: '安盛 AXA 开通指引',
+            desc: '安盛必须先完成IPOS课堂培训+网上考试，通过后才能开通账户。培训每月一次由安盛组织。',
+            tags: [{type: 'time', text: '培训后约3周'},{type: 'warn', text: '⚠️ 须先完成培训考试'}],
+            materials: ['① 参加安盛IPOS课堂培训（每月一次，由安盛组织）','② 完成IPOS网上考试','③ 考试通过后，安盛将在约3周内创建账号','④ 在公司邮箱收到登录通知','⑤ 登录并设置密码','','💡 培训时间由安盛安排，留意群内通知'],
+            callout: '安盛开通前提是完成培训+考试，建议有签安盛单的计划就提前参加培训'
+          },
+          {
+            title: '周大福开通指引',
+            desc: '周大福暂无个人持续账户，签单前须提前通知团队长安排。',
+            tags: [{type: 'warn', text: '⚠️ 提前2个工作日'}],
+            materials: ['① 确认客户要签周大福产品','② 签单前至少2个工作日通知团队长/团队长秘书','③ 由团队长协调安排签单系统权限'],
+            callout: '周大福为按需开通，没有固定个人账户，每次签单前都需要提前通知'
+          },
+          {
+            title: '恒安标准开通指引',
+            desc: '恒安标准开通时间较长，且保司每月固定时间才处理新开通。',
+            tags: [{type: 'time', text: '较长'},{type: 'warn', text: '⚠️ 建议提前申请'}],
+            materials: ['① 联系行政申请开通','② 保司每月固定时间处理开通申请','③ 等待保司审批并在邮箱收到通知','','💡 因开通周期长，如有恒安标准的签单计划，请尽早申请，避免临时开通来不及'],
+            callout: '恒安标准开通时长在所有保司中较长，有单时避免临时开通'
+          },
+          {
+            title: '暂无个人账户的保司',
+            desc: '以下保司目前不支持开通个人账户，签单时使用公司商号。',
+            materials: ['• 富衞 (FWD)','• 中银 (BOC)','• 安达 (CHUBB)','• 永明 (Sunlife)','• 太平','• 忠意 (Generali)','• 蓝十字 (Blue Cross)','','使用公司商号签单即可，无需个人开户'],
+            file: {label: '保司开户指引完整文件', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 4.保司账号开通'}
+          }
+        ]
+      },
+      {
+        id: 'mpf',
+        title: '积金易/MPF',
+        subtitle: 'eMPF注册 → 自雇人士申请 → 缴交MPF',
+        steps: [
+          {
+            title: '积金易(eMPF)注册',
+            desc: 'IFA作为自雇人士需注册积金易平台，管理自己的强积金账户。',
+            tags: [{type: 'warn', text: '⚠️ 入职后尽早完成'}],
+            materials: ['① 前往积金易网站：www.empf.org.hk', '② 点击「登记」→ 选择「首次登记」', '③ 输入香港身份证资料进行身份验证', '④ 设置账户密码和安全问题', '⑤ 完成注册后可查看强积金账户']
+          },
+          {
+            title: '自雇人士MPF申请',
+            desc: 'IFA属于自雇人士，需要自行申请MPF计划。',
+            tags: [{type: 'time', text: '成为自雇人士后60天内申请'}],
+            materials: ['① 选择强积金受托人（如宏利、友邦、汇丰等）', '② 填写自雇人士参加表格', '③ 提交身份证明文件副本', '④ 提交商业登记证副本（如适用）', '⑤ 受托人审核通过后会发出确认书']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'training',
+    icon: '📚',
+    title: '岗前培训',
+    color: '#0EA5E9',
+    tasks: [
+      {
+        id: 'training_courses',
+        title: '新人培训课程',
+        subtitle: '分层培训体系（等待挂牌期间完成）',
+        steps: [
+          {
+            title: '分层培训课程',
+            desc: '根据你的背景选择对应课程，在等待挂牌期间即可开始学习。入职当日行政会提醒你的师父发送对应课程。',
+            tags: [{type: 'warn', text: '🔴 挂牌等待期必学'},{type: 'person', text: '📌 师父发课程链接'}],
+            table: {
+              headers: ['课程', '适合人群', '核心内容'],
+              rows: [['保险小白', '完全没有保险从业经历', '保险基础概念、功能与作用'], ['港险小白', '有内地经验但不了解港险', '港险特色、与内险核心差异'], ['Broker小白', '了解保险但不了解Broker', 'Broker运营模式、合规要求'], ['家办资管', '需了解资管产品', '资管产品知识、加办流程']]
+            },
+            file: {label: '培训课程链接', path: 'https://fd543.xetlk.com/s/q84rF'},
+            callout: '新人集训营逢双周周四举办，线上线下同步。报名方式：在个人服务群问乾乾/云妹获取报名链接。培训资料：企微→微盘→知音百科大全→行政指引→新人手册'
+          }
+        ]
+      },
+      {
+        id: 'compliance_training',
+        title: '公司合规培训',
+        subtitle: '签单前必须完成 ⚠️',
+        steps: [
+          {
+            title: '合规培训要求',
+            desc: '签单前必须完成公司合规培训，否则无法签单。这是保监局对所有保险从业者的强制要求。',
+            tags: [{type: 'warn', text: '⚠️ 签单前必须完成'},{type: 'time', text: '挂牌后尽快完成'}],
+            materials: ['📋 合规培训核心内容：','① 反洗黑钱（AML）— 识别可疑交易、客户尽职调查','② 个人资料保护 — 客户隐私处理规范','③ 保险销售合规 — 如实告知、适合性评估、冷静期说明','④ 利益冲突处理 — 独立顾问的职业操守','⑤ 内地访港投保规范（MCVA）— 如何合规接待内地客户'],
+            callout: '合规培训证书留存好，保监局或保司可能会抽查。不确定是否完成 → 在个人服务群问乾乾/云妹'
+          }
+        ]
+      },
+      {
+        id: 'aia_training',
+        title: 'AIA i学院课程',
+        subtitle: '签AIA内地单前必须通过 ⚠️',
+        steps: [
+          {
+            title: 'AIA i学院测试',
+            desc: '如果你要签AIA的内地访港客户保单，必须先在AIA系统完成i学院课程并通过测试（100%正确率）。建议挂牌后尽早完成。',
+            tags: [{type: 'warn', text: '⚠️ 签AIA内地单必过'},{type: 'tip', text: '100%正确率才通过'}],
+            materials: ['📋 操作步骤：','① 登录AIA系统（aia.com.hk/agent）','② 进入「电子服务」→「i学院」→「网上学习」','③ 找到「抵港内地人士相关课程」→ 选择【全新】','④ 完成学习并参加测试','⑤ 必须100%正确率才能通过','⑥ 通过后即可签AIA内地单'],
+            callout: '这个测试可以多次尝试，题目不难但必须全对。建议拿到AIA Code后第一时间完成。'
+          }
+        ]
+      },
+      {
+        id: 'axa_training',
+        title: 'AXA IPOS课堂培训',
+        subtitle: '开AXA Code前必须完成',
+        steps: [
+          {
+            title: 'AXA IPOS培训+考试',
+            desc: '安盛AXA的Code开通前提是完成IPOS课堂培训并通过网上考试。培训由安盛每月组织一次。',
+            tags: [{type: 'warn', text: '⚠️ 不培训就无法开AXA Code'},{type: 'time', text: '培训每月一次'}],
+            materials: ['📋 流程：','① 留意群内通知安盛IPOS培训时间（每月一次）','② 参加课堂培训（线下）','③ 完成IPOS网上考试','④ 考试通过后安盛将在约3周内创建你的账号','⑤ 在公司邮箱收到登录通知'],
+            callout: '如果有签安盛产品的计划，建议尽早参加培训。培训时间由安盛安排，错过只能等下个月。'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'signing',
+    icon: '📝',
+    title: '签单指引',
+    color: '#EF4444',
+    tasks: [
+      {
+        id: 'ifa_signing_overview',
+        title: '签单全流程速览（先看这里）',
+        subtitle: '从约单到交单，7步走完',
+        steps: [
+          {
+            title: 'IFA签单7步速览',
+            desc: '第一次签单不用紧张。首次签单可获赠1次免费CS（签单协助专员）服务，之后CS按次收费（从佣金扣除）。',
+            tags: [{type: 'warn', text: '🎁 首次签单赠送1次免费CS'},{type: 'tip', text: '之后CS按次收费'}],
+            table: {
+              headers: ['步骤', '你做什么', '谁帮你'],
+              rows: [['①', '在服务群提交意向投保申请', '@乾乾核对'],['②', '填写《投保预约表》Excel发到签单群', '乾乾建群'],['③', '乾乾创建签单服务群（5步建群）', '乾乾统筹'],['④', '签约检查清单（合规/Code/客户证件等）', '自行检查+CS协助'],['⑤', '签署文件+缴费（ZUU文件→保单→缴费）', 'CS现场指导'],['⑥', '填写交单表提交', '@ZUU行政'],['⑦', '保单跟进6节点', '乾乾统一跟进']]
+            },
+            callout: '签单前确认：①合规培训已完成 ②保司Code已开通 ③保司系统已激活。缺任何一项 → 在签单群@乾乾'
+          }
+        ]
+      },
+      {
+        id: 'intention_form',
+        title: '提交意向投保申请',
+        subtitle: '填写投保申请前准备',
+        steps: [
+          {
+            title: '第①步：填写意向投保申请信息',
+            desc: '在你的「个人直营服务群」（上牌时建立的企微群）里先发送意向投保申请信息给@乾乾核对，让行政提前协调资源。',
+            tags: [{type: 'person', text: '📌 @乾乾 提交'}, {type: 'warn', text: '建群前必须先提交'}],
+            table: {
+              headers: ['填写项', '说明'],
+              rows: [['顾问（即您本人）', '你的姓名'], ['签约时间', 'YYYYMMDD+具体时间（例：20260101 10:30）'], ['投保人', '投保人姓名'], ['受保人', '受保人姓名（可与投保人相同）'], ['意向保司', '保险公司名称'], ['意向产品', '产品名称 + 缴费年期'], ['1.保险公司，产品，缴费年期，保额，保费', '基本保障内容'], ['首期保费', '金额 + 货币单位（优惠前）'], ['总保额', '重疾和寿险需要填写，储蓄险不需要'], ['体况（是否有体况）', '是否有体况'], ['意向签约地点', '保司 / 公司 / 外出签单'], ['IFA', '若为本人填写「本人」即可']]
+            },
+            copyText: '🚀ZUU| 意向投保申请信息\n\n顾问（即您本人）：\n签约时间：\n投保人：\n受保人：\n意向保司：\n意向产品：\n1.保险公司，产品，缴费年期，保额，保费\n\n首期保费：\n总保额：重疾和寿险需要填写，储蓄险不需要\n体况（是否有体况）：\n意向签约地点：\nIFA：\n若为本人此处填写「本人」即可\n\n⚠️备注\n1. 是否预交：\n2. 是否回溯（仅重疾产品）：\n3. 客户身份：\n4. 是否资遇老客户：\n5. 客户是否PI：\n6. IFA是否需要协助：',
+            materials: ['⚠️ 备注必填项：', '① 是否预交：是 / 否', '② 是否回溯（仅重疾产品）：是 / 否', '③ 客户身份：HK永居 / HK非永居 / 大陆身份', '④ 是否资遇老客户：是 / 否', '⑤ 客户是否PI：是 / 否', '⑥ IFA是否需要协助：是 / 否']
+          }
+        ]
+      },
+      {
+        id: 'booking_form',
+        title: '填写投保预约表',
+        subtitle: '客户信息详细记录',
+        steps: [
+          {
+            title: '第②步：填写投保预约表（Excel）',
+            desc: '乾乾核对后会创建签单服务群，你需要把客户详细信息填入《投保预约表》Excel发到签单群。',
+            tags: [{type: 'person', text: '📌 填好发进签单群'}, {type: 'tip', text: '后续将迁移至LifeBee系统'}],
+            table: {
+              headers: ['Excel表单', '填写内容'],
+              rows: [['投保预约表', 'TR资料、保司产品、缴费年期、投保金额、预约日期时间、签单地点、是否PI'], ['客户信息（投保人/受保人）', '姓名、身份证、通行证、出生日期、性别、国籍、职业、收入、地址等'], ['开户预约表', '如需银行开户：个人信息、首选银行（汇丰/渣打/中银/众安/东亚/南洋/招商永隆）'], ['用餐用车服务预约表', '如需用餐：日期/时间/人数/人均餐费/地点；如需专车：日期/时间/上车地点/目的地']]
+            },
+            callout: '📌 当前用Excel过渡，后续ZUU的LifeBee开发好后，客户信息可直接在系统填写',
+            file: {label: '投保预约表模板', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 5.签单投保 → 投保预约表'}
+          }
+        ]
+      },
+      {
+        id: 'signing_group',
+        title: '创建签单服务群',
+        subtitle: '建立签单协调群组',
+        steps: [
+          {
+            title: '第③步：创建签单服务群',
+            desc: '乾乾核对信息后由乾乾负责建群并拉入签单服务成员，严格按照以下5步建群格式操作。',
+            tags: [{type: 'person', text: '📌 乾乾统筹'}, {type: 'warn', text: '⚠️ 预约必看'}],
+            table: {
+              headers: ['步骤', '操作', '要点'],
+              rows: [['第1步', '创建群聊，拉对接员入群', '拉入全部签单服务人员（见下方清单）'], ['第2步', '转移群主给人力小管家', '@人力小管家-Sharon'], ['第3步', '修改群名（严格按格式）', '【新单待定】投保人-YYMMDD-保司-单数-产品类型'], ['第4步', '发送已填写好的预约模板', '把第①步的意向投保申请信息发进群'], ['第5步', '置顶预约模板', '方便群内所有人快速查看']]
+            },
+            materials: ['📋 签单服务人员清单：', '预约专员：@资通 | Sherry', '业务部主任：@保单管家-黄通 | Tina', '保单专员：@保件行政-Alfred（签单行政）', '对账专员：@保通 | Carmen（进账后检查）', 'Pending专员：@保件行政-Alfred（保件行政）', '人力小管家：@人力小管家-Sharon', '⚠️ 请勿拉其他无关人员入群'],
+            callout: '群名格式：【新单待定】投保人姓名-YYMMDD-保司-投保单数-储蓄(&重疾/医疗)。同一投保人、同一天签单、同一家保司才能在同一个签单群对接。'
+          }
+        ]
+      },
+      {
+        id: 'pre_signing_checklist',
+        title: '签约检查清单 & SOP',
+        subtitle: '签单前的准备工作',
+        steps: [
+          {
+            title: '投保前：签约检查清单 & SOP',
+            desc: '签单前务必完成以下准备。首次签单赠送1次免费CS协助，之后CS按次收费（从佣金扣除）。建议新人签单时预约CS。',
+            tags: [{type: 'warn', text: '🎁 首次签单赠送1次免费CS'},{type: 'tip', text: 'CS费用从佣金扣除'}],
+            materials: ['💡 CS = Customer Service 签单协助服务，有经验的签单专员在旁指导你完成签单','💰 首次签单赠送1次免费CS，之后线下协助500港币/单、线上指导300港币/单（从佣金扣除）','','✅ 签约前准备：', '已完成AIA线上MCV培训并通过考试（100%正确率）', '已完成公司合规培训', '已获得个人TR Code（或确认可用商号）', '已激活保司系统账号并修改初始密码', '已确认客户身份（内地访港人士需MCVA认证）', '已签约保司VIP中心（如需要），并获得确认', '已准备好合规宣传材料', '', '✅ 文件准备：', '投保申请书（纸质/电子）', '投保计划书/保单书（PA，日期不晚于计划书日期）', '重要资料科声明书-内地人士（MCV客户必须）', '客户身份证/通行证复印件（CTC）', '客户入境小白纸复印件（CTC）', '大额问卷/保额问卷（如超保额）', '', '✅ 系统操作：', '已在保司投保系统录入客户信息', '已生成投保书页面/投保文件', '已完成电子签单/准备纸质文件', '已提交订单到保司系统'],
+            callout: '重要提醒：所有保司系统账号严禁外借；有疑问请通过IFA个人群联系相关负责人',
+            file: {label: '签单流程图', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 5.签单投保 → 签单流程1.0'}
+          }
+        ]
+      },
+      {
+        id: 'file_payment',
+        title: '签署文件 & 缴费',
+        subtitle: '完成文件签署和保费缴纳',
+        steps: [
+          {
+            title: '投保中：签署文件 & 缴费',
+            desc: '先签ZUU文件，再签保单文件，最后缴费。',
+            tags: [{type: 'warn', text: '签单顺序不可颠倒'}],
+            materials: ['① 在ZUU小程序上完成ZUU内部文件签署', '② 完成保单投保文件签署（CS协助）', '③ 客户完成首期保费缴费'],
+            file: {label: 'ZUU内部表格', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 5.签单投保 → ZUU内部表格客户签字版'}
+          }
+        ]
+      },
+      {
+        id: 'delivery_form',
+        title: '填写交单表',
+        subtitle: '保单交单流程完成',
+        steps: [
+          {
+            title: '投保后：填写交单表',
+            desc: '签单完成后必须填写新生意交单表，提交给ZUU的行政伙伴。',
+            tags: [{type: 'warn', text: '⚠️ 必须提交，防止保单长期悬挂'}, {type: 'person', text: '📌 交给ZUU的行政伙伴'}],
+            file: {label: '交单表', path: '行政办公室领取（纸质）'}
+          }
+        ]
+      },
+      {
+        id: 'admin_fee',
+        title: '签单行政费说明',
+        subtitle: '签单前了解费用构成 ⚠️',
+        steps: [
+          {
+            title: '签单行政费收费标准',
+            desc: '每次签单涉及行政费用，请提前了解，避免签单时才发现需要缴费。',
+            tags: [{type: 'warn', text: '⚠️ 签单前必知'},{type: 'tip', text: '费用从佣金扣除'}],
+            table: {
+              headers: ['费用项目', '费用金额', '说明'],
+              rows: [['D1 线下协助签单', '500港币/单', '48h内取消预约不退费'],['D2 线上指导协助', '300港币/单', '48h内取消预约不退费'],['D3 一单多投后取消', '前两单600/单，第三单起300/单', '同一受保人3张以上保障类产品取消'],['D4 加班签单', '300港币/单', '非工作时间(周一至五9:30-18:00外)'],['D5 临时加单', '150港币/单', '签单前1日18:00后预约为加单'],['D6 临时变更', '150港币/单', '签单日17:00后变更信息'],['D7 指定地点/特殊天气', '500港币/单', '偏远地区、黑雨/8号风球期间'],['D8 预约体检', '150港币/单', '经CS预约的体检等，取消不退'],['D9 中远商场', '150港币/单', '商场超半小时按临时加单算']]
+            },
+            materials: ['🎁 首次签单赠送1次免费CS协助（该次不纳入方案考核）','','📋 费用处理方式：','• CS行政费直接从佣金结算中扣除','• 以上加费项目可叠加','• 全额补贴给CS','• 与公司规定的行政费互不干扰','','📋 CS签约协助方案：','• 每年交6万USD标保 → 累计1个CS协助名额','• 仅限同一投保人使用','• 标保折扣比：首折10%、2/3年交折50%、5年交以上100%计算','','📋 专车服务费用（丰田商务车，7:00-22:00）：','• 九龙→深圳市内：HK$900（港岛加$100）','• 九龙→深圳机场：HK$1000（港岛加$100）','• 香港机场接送：HK$550（隧道/停车场另算）','• 西九接送：HK$450（隧道/停车场另算）','• 香港本地包车：HK$270/小时（4小时起）','• 用车需提前3个工作日申请'],
+            callout: '详细收费标准请查看：企微 → 微盘 → 资遇行政指引 → 5.签单投保 → 行政费相关 → 签单费收费指引',
+            file: {label: '签单费收费指引', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 5.签单投保 → 行政费相关'}
+          }
+        ]
+      },
+      {
+        id: 'weekend_signing',
+        title: '周末预约签单机制',
+        subtitle: '周末轮值及响应时效',
+        steps: [
+          {
+            title: '周末轮值制度',
+            desc: '周末签单预约由轮值顾问负责协调',
+            materials: ['乾乾 周六/周日轮班', '11:00上午查看预约信息', '16:00下午查看预约信息', '20:00晚上查看预约信息', '有事提前协调换班']
+          },
+          {
+            title: '响应时效要求',
+            desc: '不同签单时间的响应要求',
+            materials: ['约单当天签单 → 1小时内回复', '第二天签单 → 3小时内回复', '未回复 → 联系师父和区伙协调'],
+            tags: [{type: 'warn', text: '⚠️ 必须遵守时效'}]
+          },
+          {
+            title: '周末预约提交方式',
+            desc: '在你的「个人直营服务群」里@乾乾，提交预约签单简表',
+            tags: [{type: 'person', text: '📌 @乾乾 提交'}],
+            materials: ['在个人直营服务群发送消息', '@乾乾 提供预约签单简表', '包含签单时间、客户信息、保司等关键信息']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'followup',
+    icon: '📊',
+    title: '后续内容',
+    color: '#F97316',
+    tasks: [
+      {
+        id: 'policy_followup',
+        title: '保单跟进',
+        subtitle: '签单后6个节点逐一跟进',
+        steps: [
+          {
+            title: '保单跟进6节点',
+            desc: '签单完成后进入保单跟进阶段，由乾乾统一负责跟进。',
+            tags: [{type: 'person', text: '📌 乾乾负责跟进'}],
+            table: {
+              headers: ['节点', '说明', '你需要做什么'],
+              rows: [['① 填写保单信息', '签单完成后在签单群提交保单信息', '在签单群发送保单编号等信息给Alfred'], ['② 确认递交', '保单递交保司', '检查递交状态'], ['③ Pending处理', '保司要求补充材料', '配合补交（签单群@Sherman/Alfred）'], ['④ 完成缴费', '确认首期保费入账', '跟进缴费凭证（Carmen在群内核对）'], ['⑤ 确认生效', '保单正式生效', 'Carmen在签单群通知'], ['⑥ 收取回执', '欢迎信和冷静期通知书', '签署后9天内完成']]
+            },
+            callout: '保单生效后：在保单群发送售后服务说明卡'
+          },
+          {
+            title: 'Pending处理要点',
+            desc: 'Pending是保司核保过程中需要配合完成的待办事项。',
+            tags: [{type: 'warn', text: '⚠️ 1个月内必须回复，否则投保失效'}],
+            materials: ['常见类型：补交身份证明、补充资料表格、财务证明、健康声明', '⏱ 提交资料后大概3-7个工作日会有回复', '⚠️ 必须在1个月内回复，否则投保申请会失效', '不确定如何处理 → 在签单群@Sherman或Alfred'],
+            contacts: [{name: 'Sherman / Alfred', role: 'ZUU保单行政 · Pending处理', avatar: '👨‍💼', color: '#EBF5FF'}, {name: '三牧老师', role: '核保支持 · 体况和健康告知', avatar: '🩺', color: '#E8F8EE'}]
+          }
+        ]
+      },
+      {
+        id: 'commission_review',
+        title: '佣金与考核',
+        subtitle: '佣金发放、业绩追踪',
+        steps: [
+          {
+            title: '佣金发放规则',
+            desc: '每月两次发放，工资单发送到个人Microsoft邮箱。',
+            tags: [{type: 'time', text: '每月5号和25号发放'}],
+            materials: ['ZUU财务邮件发送工资单 → IFA核对', '如有问题 → 标注回复并抄送乾乾/云妹 → 行政跟进ZUU', '3%的佣金花红（政策有效期至2026/12/31）', '佣金问题不直接联系ZUU财务，由乾乾先筛查过滤'],
+            callout: '佣金争议处理流程：IFA发现问题 → 回复邮件抄送乾乾/云妹 → 乾乾核查 → 如属实则反馈ZUU'
+          },
+          {
+            title: '续期对账',
+            desc: '使用对账邮件模板发送至续保邮箱。',
+            materials: ['对账邮箱：Renewal@zuuins.com.hk', '邮件需包含：付款人姓名、账号、金额、保单号码、付款日期、收款人信息', '缴费后必须提供缴费凭证给公司对账']
+          },
+          {
+            title: '业绩追踪',
+            desc: 'ZUU每月提供业绩追踪表。',
+            tags: [{type: 'person', text: '📌 乾乾加工后发送'}],
+            materials: ['ZUU每月给区伙业绩追踪表', '由乾乾加工备注后发给你（告知差多少业绩可达成什么职级）', '追踪维度：Active状态、合伙人晋升/维持、阶段性奖励、MDRT']
+          }
+        ]
+      },
+      {
+        id: 'after_sales',
+        title: '售后服务',
+        subtitle: '续保、保全、理赔',
+        steps: [
+          {
+            title: '续保提醒',
+            desc: '由胖丁负责，按时间线提前提醒。',
+            tags: [{type: 'person', text: '📌 胖丁负责'}],
+            table: {
+              headers: ['时间节点', '操作'],
+              rows: [['保单日期前60天', '第1次续保提醒'], ['保单日期前20-30天', '第2次续保提醒'], ['保单日期前10天', '第3次续保提醒'], ['保单日期后3天', '宽限期提醒①'], ['宽限期结束前10天', '宽限期提醒②']]
+            }
+          },
+          {
+            title: '保全变更',
+            desc: '更换投保人、更换保单货币、申请提取/减额缴清等。',
+            tags: [{type: 'person', text: '📌 联系胖丁'}],
+            callout: '保全变更由顾问主导与客户沟通，胖丁执行技术操作'
+          },
+          {
+            title: '理赔处理',
+            desc: '行政不直接处理理赔，提供流程指引。',
+            tags: [{type: 'person', text: '📌 三牧老师（核保支持）'}],
+            materials: ['行政提供理赔流程文档', '顾问自行对接保司', '如有核保/体况相关问题 → 联系三牧老师']
+          },
+          {
+            title: '各保司特殊要求',
+            desc: '部分保司有额外的续保要求。',
+            materials: ['保诚电汇需附上电汇表格', '安盛需附上缴款单', '万通如使用支票/本票/银联卡/信用卡需递交G04表格', '缴付账单建议不超过10万港币'],
+            file: {label: '纸本保单代领', path: '统一由红磡办公室处理。代领邮箱：admin@zuuins.com.hk'}
+          }
+        ]
+      },
+      {
+        id: 'compliance',
+        title: '持牌维护与合规',
+        subtitle: 'CPD学分、签证续签',
+        steps: [
+          {
+            title: 'CPD持续专业培训',
+            desc: '每年须完成规定学分的持续专业培训（CPD），并在规定时间内自行申报。',
+            tags: [{type: 'warn', text: '⚠️ 每年必须完成'}],
+            materials: ['每年须修满15个CPD学分', '保司内部不定期有免费课程（留意邮箱/群内通知）', '外部自费报名途径：高峰进修学院、IFPHK、PiBA、HKCIB、VIP Consultancy、Train On Top等'],
+            callout: '申报方式：登入「保险中介一站通」→ 持续专业培训声明 → 选择是否已完成 → 同意 → 提交'
+          },
+          {
+            title: '签证续签指引（非永居适用）',
+            desc: '非本地毕业生须于签证到期前4周申请延期，公司可协助办理。',
+            tags: [{type: 'warn', text: '非永居必看'}],
+            materials: ['条件①：过去12个月平均每月收入 ≥ HKD $15,000（个人课税Taxable Income）', '条件②：个人续保率不少于85%', '如需在职证明/入息证明 → 在直营服务群联系助理 → 由HR部门申请', '流程：TR提交续签申请 → 将申请密钥信息发给公司 → HR提交公司部分 → 入境处审批 → 最新签证提交公司备份']
+          }
+        ]
+      }
+    ]
+  }
+];
+
+// ========== 转介人（TR）全流程数据 ==========
+const TR_LIGHTS = [
+  {
+    id: 'first_week',
+    icon: '🌟',
+    title: '新人第一周必做（先看这里）',
+    color: '#10B981',
+    tasks: [
+      {
+        id: 'tr_week1_overview',
+        title: '转介人入职全流程总览',
+        subtitle: '从签约到转介第一单要多久？',
+        steps: [
+          {
+            title: '转介人全流程时间轴',
+            desc: '转介人流程比IFA简单很多，不需要考牌和挂牌。',
+            table: {
+              headers: ['阶段', '内容', '预计时间', '优先级'],
+              rows: [['第1周', '准备入职资料 + 面谈 + 签署转介合作协议', '3-5天', '🔴 立刻做'],['第1-2周', '行政开通工具和权限', '3-7天', '🟡 等待开通'],['第2周起', '参加培训课程 + 熟悉产品', '持续学习', '🔴 边等边学'],['准备好后', '转介第一个客户 → 提交签单申请', '—', '🟢 水到渠成']]
+            },
+            callout: '转介人最快1-2周就可以开始工作！关键是尽快完成培训，熟悉产品。'
+          },
+          {
+            title: '转介人 vs IFA 的核心区别',
+            desc: '搞清楚这些区别，后面就不会混淆。',
+            table: {
+              headers: ['项目', '转介人(TR)', 'IFA(持牌人)'],
+              rows: [['是否需要考牌', '❌ 不需要', '✅ 必须通过考试'],['签单用什么Code', '公司商号（ZUU的统一代码）', '个人Code（你自己的代码）'],['与ZUU关系', '合作关系（非雇佣）', '挂靠关系'],['各保司账号', '❌ 不开通，用公司商号', '✅ 各家独立开通'],['是否可以转正', '✅ 可选择持牌转正为IFA', '—'],['佣金规则', '正常发放（选择持牌则hold）', '正常发放']]
+            },
+            callout: '核心记住：你用「公司商号」签单，不用自己开Code。商号就是ZUU在各保司的统一公司编码，在百科全书「各保司Broker Code速查」里可以查到。'
+          }
+        ]
+      },
+      {
+        id: 'tr_week1_checklist',
+        title: '第一周5件事',
+        subtitle: '按顺序做完这5件事',
+        steps: [
+          {
+            title: '转介人第一周必做清单',
+            desc: '转介人入职比IFA快很多，做好这5件事就够了。',
+            tags: [{type: 'warn', text: '⚠️ 按顺序完成'}],
+            materials: ['✅ 第1天：联系团队主管（云澜找云妹，乾行找乾乾），确认入职安排','✅ 第1天：在百科全书里读完「术语小词典」，搞懂IFA/TR/Code/商号等基本概念','✅ 第2天：准备入职材料（身份证、履历、住址证明等，详见「入职资料准备」）','✅ 第3-4天：完成面谈 + 签署转介合作协议','✅ 第5天起：开始参加培训课程，先从「保险小白」或「港险小白」学起'],
+            callout: '转介人无需考试！直接准备材料→面谈→签协议→培训→开始转介。如果想持牌，入职时跟乾乾/云妹说明即可。'
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 'onboard',
+    icon: '🤝',
+    title: '入职流程',
+    color: '#8B5CF6',
+    tasks: [
+      {
+        id: 'materials',
+        title: '入职资料准备',
+        subtitle: '转介人入职材料清单',
+        steps: [
+          {
+            title: '准备入职必备材料',
+            desc: '转介人入职材料相对简单，无需保险中介人资格考试成绩。对接团队行政大主管安排面谈。',
+            tags: [{ type: 'person', text: '📌 对接：团队行政大主管' }],
+            table: {
+              headers: ['序号', '资料项', '要求说明'],
+              rows: [
+                ['①', '香港身份证', '正反面清晰复印件'],
+                ['②', '个人履历', '详细工作经历'],
+                ['③', '就业证据文件', '最近1-2周出入境记录/工作证明/合同等'],
+                ['④', '最近3个月香港住址证明', '银行信件/政府信件/水电煤等'],
+                ['⑤', '银行月结单', '最近1个月，含银行卡号等信息'],
+                ['⑥', '香港电话号码和邮箱', '有效联系方式'],
+                ['⑦', '有效旅行证件', '护照/签证等（非永居适用）'],
+                ['⑧', '转介合作协议', 'ZUU提供，双方签署']
+              ]
+            },
+            callout: '转介人无需考取保险中介人资格考试。如想要持牌，可在入职时说明。'
+          },
+          {
+            title: '首次申请永居者额外材料',
+            desc: '如果近期首次申请香港永久居留，需额外提供以下资料。',
+            tags: [{ type: 'warn', text: '非永居必看' }],
+            materials: [
+              '有效旅行证件（护照）',
+              '有效逗留签证 & 首次入境小白条',
+              '在读学签（如适用）'
+            ]
+          }
+        ]
+      },
+      {
+        id: 'agreement',
+        title: '签署转介合作协议',
+        subtitle: '明确转介人权利义务',
+        steps: [
+          {
+            title: '面谈与资格确认',
+            desc: '经团队行政大主管面谈确认后，进入协议签署流程。云澜团队找云妹，乾行团队找乾乾。',
+            tags: [{ type: 'person', text: '📌 团队行政大主管 → ZUU行政' }],
+            contacts: [
+              { name: '云妹', role: '云澜团队主管 · 人力与设计', avatar: '👩', color: '#F3E8FF' },
+              { name: '乾乾', role: '乾行团队主管 · 人力与保单', avatar: '👩‍💼', color: '#EBF5FF' }
+            ]
+          },
+          {
+            title: '签署转介合作协议',
+            desc: '与ZUU签署转介合作协议（非正式雇佣合约），明确转介人权利义务。',
+            tags: [
+              { type: 'warn', text: '⚠️ 非雇佣关系' },
+              { type: 'time', text: '签署约1天' }
+            ],
+            materials: [
+              '转介合作协议由ZUU提供标准模板',
+              '协议明确转介佣金分成方式',
+              '转介人未必一定一年内会持牌，有些伙伴可能就只做转介',
+              '签署后即可开始使用部分工具和资源'
+            ],
+            callout: '重要：转介人与ZUU为合作关系，非雇佣关系。佣金规则详见"佣金说明"。'
+          }
+        ]
+      },
+      {
+        id: 'tools',
+        title: '入职工具配置',
+        subtitle: 'TR专属权限与工具',
+        steps: [
+          {
+            title: 'TR专属权限配置',
+            desc: '签约后行政会协助开通以下工具和权限。注意：部分工具为IFA专属，TR暂不开通。',
+            tags: [{ type: 'person', text: '📌 ZUU行政 + 乾乾对接' }],
+            table: {
+              headers: ['工具/权限', 'TR是否开通', '说明'],
+              rows: [
+                ['比原家办电子名片', '✅ 开通', '转介人专属身份名片（非ZUU Broker名片）'],
+                ['前进四企微 & 小程序', '✅ 开通', '资料库、PoeS计划书制作'],
+                ['ZUU邮箱', '✅ 开通', '公司邮箱，接收账单通知、申请CPD学分（IFA用它接收保司Code密码）'],
+                ['ZUU Life B(LB)', '✅ 部分开通', '产品中心+智能方案（不含计划书功能，用PoeS替代）'],
+                ['前进四微盘', '✅ 开通', '各保司产品资料、行政指引'],
+                ['加办名片', '✅ 开通', '家办电子名片'],
+                ['ZUU企业微信', '❌ 不开通', 'IFA专属'],
+                ['ZUU Broker名片', '❌ 不开通', 'IFA专属（TR用比原家办名片）'],
+                ['蓝宝书(ZXcel)', '❌ 不开通', 'IFA专属'],
+                ['各保司Code', '❌ 不开通', 'TR无个人保司账号，签单使用公司商号']
+              ]
+            },
+            callout: 'TR签单时使用公司商号（而非个人Code），签单流程与IFA相同，但无需自行开通保司账号'
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'training',
+    icon: '📚',
+    title: '岗前培训',
+    color: '#0EA5E9',
+    tasks: [
+      {
+        id: 'courses',
+        title: '新人培训课程',
+        subtitle: '分层培训体系',
+        steps: [
+          {
+            title: '分层培训课程',
+            desc: '根据你的背景选择对应课程，签约后即可开始学习。',
+            table: {
+              headers: ['课程', '适合人群', '核心内容'],
+              rows: [
+                ['保险小白', '完全没有保险从业经历', '保险基础概念、功能与作用'],
+                ['港险小白', '有内地经验但不了解港险', '港险特色、与内险核心差异'],
+                ['Broker小白', '了解保险但不了解Broker', 'Broker运营模式、合规要求'],
+                ['家办资管', '需了解资管产品', '资管产品知识、加办流程']
+              ]
+            },
+            file: { label: '培训课程链接', path: 'https://fd543.xetlk.com/s/q84rF' },
+            callout: '新人集训营逢双周周四举办，线上线下同步。报名方式：在个人服务群问乾乾/云妹获取链接'
+          }
+        ]
+      },
+      {
+        id: 'tr_compliance',
+        title: '公司合规培训',
+        subtitle: '签单前必须完成 ⚠️',
+        steps: [
+          {
+            title: '合规培训要求',
+            desc: 'TR同样需要完成公司合规培训才能参与签单。这是保监局对所有保险从业者的强制要求。',
+            tags: [{type: 'warn', text: '⚠️ 签单前必须完成'},{type: 'time', text: '签约后尽快完成'}],
+            materials: ['📋 合规培训核心内容：','① 反洗黑钱（AML）— 识别可疑交易、客户尽职调查','② 个人资料保护 — 客户隐私处理规范','③ 保险销售合规 — 如实告知、适合性评估、冷静期说明','④ 利益冲突处理 — 独立顾问的职业操守','⑤ 内地访港投保规范（MCVA）— 如何合规接待内地客户'],
+            callout: '不确定是否完成合规培训 → 在个人服务群问乾乾/云妹'
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'signing',
+    icon: '📝',
+    title: '签单指引',
+    color: '#EF4444',
+    tasks: [
+      {
+        id: 'tr_signing_overview',
+        title: '你的第一次签单（先看这里）',
+        subtitle: '签单全流程一图看懂',
+        steps: [
+          {
+            title: 'TR签单6步速览',
+            desc: '第一次签单不用紧张，跟着这6步走就行。首次签单赠送1次免费CS（签单协助专员）服务，之后CS按次收费。',
+            tags: [{type: 'warn', text: '🎁 首次签单赠送1次免费CS'},{type: 'tip', text: '之后CS按次收费'}],
+            table: {
+              headers: ['步骤', '你做什么', '谁帮你'],
+              rows: [['①', '在服务群提交意向投保申请', '@乾乾核对'],['②', '填写《投保预约表》Excel发到签单群', '乾乾建群'],['③', '乾乾创建签单服务群', '乾乾统筹'],['④', '签约检查清单（合规培训、客户证件等）', '自行检查+CS协助'],['⑤', '签署文件+缴费（先ZUU文件→再保单→缴费）', 'CS现场指导'],['⑥', '填写交单表提交', '@ZUU行政']]
+            },
+            materials: ['⚠️ TR特别注意：','• 你没有个人保司Code，签单时使用公司商号（ZUU在各保司的统一编码）','• 商号查询：切换到百科全书 →「各保司Broker Code速查」','• 第一次签单务必提前1天在签单群确认所有准备工作'],
+            callout: '记住：有任何不确定的，签单群里@乾乾或@Bobo/Ray（审单辅导）就行，千万不要自己硬上。'
+          }
+        ]
+      },
+      {
+        id: 'intent',
+        title: '提交意向投保申请',
+        subtitle: '在服务群里先发送意向投保申请信息',
+        steps: [
+          {
+            title: '第①步：填写意向投保申请信息',
+            desc: '在你的服务群里先发送意向投保申请信息给@乾乾核对，让行政提前协调资源。',
+            tags: [
+              { type: 'person', text: '📌 @乾乾 提交' },
+              { type: 'warn', text: '建群前必须先提交' }
+            ],
+            table: {
+              headers: ['填写项', '说明'],
+              rows: [
+                ['顾问（即您本人）', '你的姓名'],
+                ['签约时间', 'YYYYMMDD+具体时间'],
+                ['投保人', '投保人姓名'],
+                ['受保人', '受保人姓名（可与投保人相同）'],
+                ['意向保司', '保险公司名称'],
+                ['意向产品', '产品名称 + 缴费年期'],
+                ['1.保险公司，产品，缴费年期，保额，保费', '详细产品信息'],
+                ['首期保费', '金额 + 货币单位（优惠前）'],
+                ['总保额', '重疾和寿险需要填写，储蓄险不需要'],
+                ['体况（是否有体况）', '是/否'],
+                ['意向签约地点', '保司 / 公司 / 外出签单'],
+                ['IFA', '若为本人此处填写「本人」即可']
+              ]
+            },
+            copyText: '🚀ZUU| 意向投保申请信息\n\n顾问（即您本人）：\n签约时间：\n投保人：\n受保人：\n意向保司：\n意向产品：\n1.保险公司，产品，缴费年期，保额，保费\n\n首期保费：\n总保额：重疾和寿险需要填写，储蓄险不需要\n体况（是否有体况）：\n意向签约地点：\nIFA：\n若为本人此处填写「本人」即可\n\n⚠️备注\n1. 是否预交：\n2. 是否回溯（仅重疾产品）：\n3. 客户身份：\n4. 是否资遇老客户：\n5. 客户是否PI：\n6. IFA是否需要协助：',
+            materials: [
+              '⚠️ 备注必填项：',
+              '① 是否预交：是 / 否',
+              '② 是否回溯（仅重疾产品）：是 / 否',
+              '③ 客户身份：HK永居 / HK非永居 / 大陆身份',
+              '④ 是否资遇老客户：是 / 否',
+              '⑤ 客户是否PI：是 / 否',
+              '⑥ IFA是否需要协助：是 / 否'
+            ]
+          }
+        ]
+      },
+      {
+        id: 'booking',
+        title: '填写投保预约表',
+        subtitle: '提交客户详细信息到签单群',
+        steps: [
+          {
+            title: '第②步：填写投保预约表（Excel）',
+            desc: '乾乾核对后会创建签单服务群，你需要把客户详细信息填入《投保预约表》Excel发到签单群。',
+            tags: [{ type: 'person', text: '📌 填好发进签单群' }],
+            callout: '📌 当前用Excel过渡，后续ZUU的LifeBee开发好后，客户信息可直接在系统填写',
+            file: { label: '投保预约表模板', path: '企微 → 微盘 → 直营百科大全 → 资遇行政指引 → 5.签单投保 → 投保预约表' }
+          }
+        ]
+      },
+      {
+        id: 'service_group',
+        title: '创建签单服务群',
+        subtitle: '行政统筹建群和成员配置',
+        steps: [
+          {
+            title: '第③步：创建签单服务群',
+            desc: '乾乾核对信息后由乾乾负责建群并拉入签单服务成员（TR无需自己建群或拉人）。',
+            tags: [{ type: 'person', text: '📌 乾乾统筹' }],
+            materials: [
+              '签单服务群由乾乾统一创建',
+              '群内包含：预约专员、业务部主任、保单专员、对账专员等',
+              '群名格式：【新单待定】投保人-YYMMDD-保司-单数-产品类型',
+              '⚠️ TR使用公司商号签单，无需自行开通保司Code'
+            ],
+            callout: '同一投保人、同一天签单、同一家保司才能在同一个签单群对接'
+          }
+        ]
+      },
+      {
+        id: 'checklist',
+        title: '签约检查清单',
+        subtitle: '签单前必须完成的准备',
+        steps: [
+          {
+            title: '投保前：签约检查清单',
+            desc: '签单前务必完成以下准备。首次签单赠送1次免费CS协助，之后CS按次收费（从佣金扣除）。建议新人签单时预约CS。',
+            tags: [{ type: 'warn', text: '🎁 首次签单赠送1次免费CS' },{ type: 'tip', text: 'CS费用从佣金扣除' }],
+            materials: [
+              '✅ 签约前准备：',
+              '已完成公司合规培训',
+              '已确认客户身份（内地访港人士需MCVA认证）',
+              '已准备好合规宣传材料',
+              '',
+              '✅ 文件准备：',
+              '投保申请书（纸质/电子）',
+              '投保计划书/保单书',
+              '客户身份证/通行证复印件',
+              '',
+              '⚠️ TR特别注意：',
+              '你没有个人保司Code，签单时使用公司商号',
+              '签单前请确认对应保司的公司商号（查看百科全书→各保司Code速查）'
+            ],
+            callout: '重要提醒：所有保司系统账号严禁外借；有疑问请在签单群联系相关负责人'
+          }
+        ]
+      },
+      {
+        id: 'signing_docs',
+        title: '签署文件 & 缴费',
+        subtitle: '投保中的关键步骤',
+        steps: [
+          {
+            title: '投保中：签署文件 & 缴费',
+            desc: '先签ZUU文件，再签保单文件，最后缴费。',
+            tags: [{ type: 'warn', text: '签单顺序不可颠倒' }],
+            materials: [
+              '① 在ZUU小程序上完成ZUU内部文件签署',
+              '② 完成保单投保文件签署（CS协助）',
+              '③ 客户完成首期保费缴费'
+            ]
+          }
+        ]
+      },
+      {
+        id: 'submission',
+        title: '填写交单表',
+        subtitle: '签单完成后的提交流程',
+        steps: [
+          {
+            title: '投保后：填写交单表',
+            desc: '签单完成后必须填写新生意交单表，在你的服务群里@乾乾提交预约签单简表。',
+            tags: [
+              { type: 'warn', text: '⚠️ 必须提交' },
+              { type: 'person', text: '📌 交给ZUU行政' }
+            ],
+            file: { label: '交单表', path: '行政办公室领取（纸质）' }
+          }
+        ]
+      },
+      {
+        id: 'weekend_signing',
+        title: '周末预约签单机制',
+        subtitle: '周末签单的响应制度',
+        steps: [
+          {
+            title: '周末轮值制度',
+            desc: '为了确保周末也能及时处理签单预约，建立了轮值机制。',
+            tags: [{ type: 'person', text: '📌 乾乾负责周六/周日轮班' }],
+            materials: [
+              '📅 轮值时间表：',
+              '乾乾 周六/周日轮班',
+              '',
+              '🕐 查看时间：',
+              '11:00 上午查看',
+              '16:00 下午查看',
+              '20:00 晚上查看',
+              '',
+              '⏱ 响应时效：',
+              '当天签单 → 1小时内回复',
+              '第二天签单 → 3小时内回复',
+              '未回复 → 联系师父和区伙协调'
+            ],
+            callout: '周末预约请在你的服务群里@乾乾，紧急情况可直接电话联系'
+          }
+        ]
+      }
+    ]
+  },
+
+  {
+    id: 'follow_up',
+    icon: '📊',
+    title: '后续内容',
+    color: '#F97316',
+    tasks: [
+      {
+        id: 'policy_follow_up',
+        title: '保单跟进',
+        subtitle: '签单后跟进要点',
+        steps: [
+          {
+            title: '保单跟进要点',
+            desc: '签单完成后由乾乾统一跟进保单进度，TR主要配合同步客户信息。',
+            tags: [{ type: 'person', text: '📌 乾乾负责跟进' }],
+            table: {
+              headers: ['节点', '说明', '你需要做什么'],
+              rows: [
+                ['① 确认递交', '保单递交保司', '确认客户信息无误'],
+                ['② Pending处理', '保司要求补充材料', '配合联系客户补交'],
+                ['③ 确认缴费', '确认首期保费入账', '协助跟进缴费凭证'],
+                ['④ 确认生效', '保单正式生效', '在群内通知'],
+                ['⑤ 收取回执', '欢迎信和冷静期通知书', '签署后9天内完成']
+              ]
+            },
+            callout: 'TR偏向前端客户关系维护，保单行政事务由团队行政处理'
+          },
+          {
+            title: 'Pending处理',
+            desc: 'Pending是保司核保过程中需要配合完成的待办事项。',
+            tags: [{ type: 'warn', text: '⚠️ 1个月内必须回复' }],
+            materials: [
+              '常见类型：补交身份证明、补充资料表格、财务证明、健康声明',
+              '⏱ 提交资料后约3-7个工作日回复',
+              '不确定如何处理 → 在签单群@Sherman或Alfred'
+            ],
+            contacts: [
+              { name: 'Sherman / Alfred', role: 'ZUU保单行政 · Pending处理', avatar: '👨‍💼', color: '#EBF5FF' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'commission',
+        title: '佣金说明',
+        subtitle: 'TR佣金规则与对账',
+        steps: [
+          {
+            title: 'TR佣金规则',
+            desc: '转介人的佣金规则与IFA不同，核心区别在于如果选择持牌，佣金会有特殊处理。',
+            tags: [{ type: 'warn', text: '⚠️ 务必了解' }],
+            materials: [
+              '佣金发放时间：每月5号和25号',
+              '如果选择持牌：持牌前的佣金会先行hold住，持牌成功后差额将一次性补发',
+              '如果只做转介：佣金正常发放，无需hold',
+              '佣金问题不直接联系ZUU财务，由乾乾先筛查过滤'
+            ],
+            callout: '佣金争议处理：发现问题 → 回复邮件抄送乾乾/云妹 → 乾乾核查 → 反馈ZUU'
+          },
+          {
+            title: '续期对账',
+            desc: '使用对账邮件模板发送至续保邮箱。',
+            materials: [
+              '对账邮箱：Renewal@zuuins.com.hk',
+              '邮件需包含：付款人姓名、账号、金额、保单号码、付款日期、收款人信息',
+              '缴费后必须提供缴费凭证给公司对账'
+            ]
+          }
+        ]
+      },
+      {
+        id: 'after_sales',
+        title: '售后服务',
+        subtitle: '保单售后与续保服务',
+        steps: [
+          {
+            title: '售后服务要点',
+            desc: '签单完成后的售后服务主要包括续保、保全和理赔协助。',
+            materials: [
+              '📌 续保服务：',
+              '续保保单问题 → 找胖丁',
+              '',
+              '📌 理赔协助：',
+              '理赔相关问题 → 找三牧老师',
+              '',
+              '📌 保全事务：',
+              '保全变更（如受益人变更、地址更新等） → 联系团队行政处理'
+            ],
+            contacts: [
+              { name: '胖丁', role: '售后服务 · 续保跟进', avatar: '👨‍💼', color: '#EBF5FF' },
+              { name: '三牧老师', role: '核保支持 · 理赔协助', avatar: '👨‍💼', color: '#EBF5FF' }
+            ]
+          }
+        ]
+      },
+      {
+        id: 'optional_licensing',
+        title: '持牌转正（可选）',
+        subtitle: 'TR转正为IFA的可选路径',
+        steps: [
+          {
+            title: '持牌转正概述',
+            desc: '如果在入职时已表明想持牌，可参照以下流程。持牌是可选的，也有伙伴可能就只做转介。',
+            tags: [{ type: 'warn', text: '⚠️ 可选项' }],
+            callout: '转介人未必一定要持牌。如想要持牌，在入职时说明即可，之后按以下流程进行。'
+          },
+          {
+            title: '持牌考试要求',
+            desc: '转介人若选择持牌，须在签署转介合作协议后一年内完成保险中介人资格考试并成功挂牌。',
+            tags: [{ type: 'warn', text: '⚠️ 一年期限（若选择持牌）' }],
+            materials: [
+              '一年内须通过保险中介人资格考试（卷一+卷三）',
+              '报考网址：www.vtc.edu.hk/iro（VTC网上报名系统）',
+              '备考工具：微信搜索「资通未来」小程序刷题',
+              '通过考试后走IFA入职挂牌流程',
+              '持牌后身份从TR转为IFA，获得完整权限',
+              '持牌前的佣金差额将一次性补发',
+              '如未在一年内持牌，佣金继续按TR规则发放'
+            ],
+            callout: '建议尽早准备考试！报考费265元/门。可使用「资通未来」小程序刷题备考',
+            file: {label: 'VTC考试报名', path: 'www.vtc.edu.hk/iro 网上报名系统'}
+          },
+          {
+            title: '转正后的变化',
+            desc: '成功持牌转正为IFA后，以下权限将升级。',
+            table: {
+              headers: ['项目', 'TR（当前）', 'IFA（转正后）'],
+              rows: [
+                ['ZUU企业微信', '不开通', '开通'],
+                ['ZUU Broker名片', '无', '开通'],
+                ['蓝宝书(ZXcel)', '不开通', '开通'],
+                ['LB计划书功能', '不可用（用PoeS）', '开通'],
+                ['各保司Code', '无个人Code', '各保司开通个人账号'],
+                ['佣金', 'hold状态（若选择持牌）', '正常发放']
+              ]
+            },
+            callout: '转正后请参照IFA版流程指引，完成挂牌审批和保司Code开通等步骤'
+          }
+        ]
+      }
+    ]
+  }
+];
+
+// ========== WIKI 数据 ==========
+const WIKI = [
+  {id:'groups',icon:'📋',title:'企微群组一览',color:'#3B82F6',steps:[{title:'企微群组总览',desc:'入群需备注全名及所属团队。不同阶段可加入不同群组。签单前请务必了解各群功能。',table:{headers:['群组类别','群名','入群条件'],rows:[['上牌前','ZUU家办直营 | 准新人答疑协助群','正在洽谈的准新人'],['上牌前','ZUU家办渠道伙伴答疑协助群','已签约渠道'],['运营群','直营 | 圆桌会','已挂牌/IA已缴费'],['运营群','各团队内部群','遵循团队长要求'],['运营群','个人直营服务群','上牌时建立'],['家办群','比元家办群','已完成上牌'],['家办群','升学中心群','已完成上牌'],['家办群','身份规划群（普晖交流群）','已完成上牌'],['家办群','香港地产群','已完成上牌'],['家办群','信托群','已完成上牌'],['保司群','安盛、保诚、万通、国寿、中银、立桥、太保、苏黎世、BUPA、安达','已完成上牌'],['智能客服','企微智能客服群','所有持牌人']]},callout:'保司群内可咨询RM获取产品信息；签单跟进在各自服务群咨询。智能客服群可@ZEUS-GPT自动回复'}]},
+  {id:'codes',icon:'🔑',title:'各保司Broker Code速查',color:'#6366F1',steps:[{title:'ZUU两家公司Broker Code',desc:'ZUU旗下有两家公司，各保司Code不同。签单时请确认使用正确的公司Code。',table:{headers:['保司','ZUU (FB1554)','ZUUINS (FB1375)'],rows:[['友邦(AIA)','77055 (Life) / 77056 (ILAS)','00098-36817'],['安盛(AXA)','054475','5-65564'],['中银(BOC)','607469','603631'],['国寿','990245','B990075'],['太平','888147','888237'],['安达(CHUBB)','190252','190184'],['周大福','9531-9531000-0397636','9529-9529000-0397164'],['富卫(FWD)','BRK23585','22159'],['忠意(Generali)','56000239','56000088'],['宏利(Manulife)','905998','TR902739'],['太保(CPIC)','205310','201723'],['保诚(Prudential)','01425281','D950-1524522'],['恒安标准','P00416GC','—'],['永明(Sunlife)','Y0C519 / Y0C520','Y0Y315'],['泰禾','380088','382678'],['立桥(Well Link)','B00113','B00096'],['万通(YF Life)','99531 (Company) / LN844 (CE)','99846'],['苏黎世(Zurich)','0511340','—'],['BLUE','FB1554','—']]},callout:'TR签单使用公司商号；IFA使用个人Code。如不确定，请在签单群确认。'}]},
+  {id:'signing',icon:'📝',title:'各保司签单方式',color:'#EF4444',steps:[{title:'电子签单 vs 纸质签单',desc:'各保司支持的签单方式不同，签单前请提前确认。',table:{headers:['保司','电子签单','纸质签单','备注'],rows:[['友邦(AIA)','✅ App签','✅','内地单需完成i学院测试'],['保诚(Prudential)','✅ ePOS','✅',''],['安盛(AXA)','✅ IPOS','✅','需先完成IPOS课程及考试'],['宏利(Manulife)','✅','✅',''],['国寿','✅','✅',''],['太平','✅ Web版','✅','需个人到网站申请账号'],['立桥','✅','✅','初始密码PASe2022! 7天内须登录'],['万通(YF Life)','✅','✅','需7项信息提前申请'],['苏黎世(Zurich)','✅ ZOOM App','✅','需自行下载注册'],['中银(BOC)','✅','✅',''],['周大福','—','✅','签单前2天通知团队长'],['BUPA','✅','✅',''],['安达(CHUBB)','—','✅',''],['恒安标准','—','✅','开通时长较长，提前申请']]},callout:'友邦签内地单需先完成i学院测试；立桥账号7天内须自行登录；恒安标准开通较慢建议提前申请'}]},
+  {id:'lifebee',icon:'📱',title:'LifeBee使用指南',color:'#10B981',steps:[{title:'LifeBee APP功能概览',desc:'LifeBee是ZUU的核心业务工具，集产品对比、保费试算、预约签单于一体。',materials:['📲 下载方式：','iOS：App Store搜索「LifeBee」','Android：storage.lifebee.tech/APP/ANDROID/lifebee-latest.apk','','📋 核心功能：','① 市场优惠资讯 — 各保司最新优惠自动推送','② 产品对比 — 多产品同时对比，下载PDF','③ 保费试算 — 即时报价，减少等待','④ 计划书 — AI自动生成，3-5分钟完成（IFA专属）','⑤ 预约签单 — 创建预约，自动同步Admin后台','⑥ 新单跟进 — 实时状态同步，自动推送Pending','⑦ 保费到期 — 保单日前30天自动提醒','⑧ 资料云盘 — 公司文件共享','⑨ 智能合约 — 查看个人佣金比例和合同日期','⑩ 分享统计 — 微信大数据追踪客户意向'],callout:'技术支持热线：+852 5575 1661 | TR版LB不含计划书功能，请使用前进四PoeS替代'}]},
+  {id:'training',icon:'📚',title:'培训课程清单',color:'#0EA5E9',steps:[{title:'分层培训课程体系',desc:'根据你的背景选择对应课程，入职后即可开始学习。',table:{headers:['课程','适合人群','核心内容'],rows:[['保险小白','完全没有保险从业经历','保险基础概念、功能与作用、市场认知'],['港险小白','有内地经验但不了解港险','港险特色、主要保司、与内险核心差异'],['Broker小白','了解保险但不了解Broker','Broker运营模式、合规要求、独立顾问身份'],['家办资管','需了解资管产品','资管产品知识、加办流程与合规']]},file:{label:'线上课程链接',path:'https://fd543.xetlk.com/s/q84rF'},callout:'新人集训营逢双周周四，线上线下同步进行 | 培训资料：企微→微盘→知音百科大全→行政指引→新人手册'},{title:'培训执行机制',desc:'入职当日由行政提醒师傅发送对应课程。',table:{headers:['角色','职责'],rows:[['行政（云妹/乾乾）','新人入职后私信提醒师傅发送对应课程合集'],['师傅','收到提醒后向新人发送匹配课程链接，跟进学习进度'],['新人','在开Code/完成挂牌过程中同步学习，不要等挂牌完成再学'],['行政（维护）','不定期更新课程合集，师傅收藏固定链接']]}}]},
+  {id:'team',icon:'👥',title:'运营团队通讯录',color:'#F59E0B',steps:[{title:'找谁办什么事',desc:'遇到问题不知道找谁？查看以下通讯录。',table:{headers:['姓名','职责范围'],rows:[['Summer / Tiya','挂牌上牌（资料收集、账户开通）'],['Anna','持牌维护、保司新Code开通'],['Tina','业务部主任 · 从规划到签单完成'],['Bobo / Ray','签单辅导 · 审单'],['Alfred','签单行政 · Pending跟进（保件行政）'],['Sherman','Pending处理协助'],['Sisi','综合行政主管'],['Emma','人力小管家 · ZUU入职对接'],['Sherry','新单预约助理'],['Sharon','新单预约管理 · 资通未来权限开通'],['Carmen','保费对账助理'],['Felicia','保司产品数据'],['Jessie','查阅及后续跟进'],['Kaman','渠道营销支持'],['胖丁','售后服务（续保/保全/理赔）'],['三牧老师','核保支持 · 体况和健康告知'],['云妹','云澜团队主管 · 人力/入职/签单预约'],['乾乾','乾行团队主管 · 保单跟进/佣金/业绩']]},callout:'入群需备注全名及所属团队 | 不确定找谁？在企微智能客服群@ZEUS-GPT'}]},
+  {id:'transfer',icon:'🔄',title:'转经纪公司指引',color:'#8B5CF6',steps:[{title:'客户转经纪公司流程',desc:'客户如需从其他经纪公司转至ZUU，需填写各保司的转经纪公司申请表。',materials:['各保司转经纪流程：','保诚：填写Change of Servicing Broker表格提交','友邦(AIA)：联系AIA RM协助转换','周大福：填写Change of Servicing Intermediary表格(AA8007)','安盛(AXA)：填写Change of Servicing Broker表格','宏利：填写「申請更换服務保險顧問」表格','太保：使用太保转经纪公司模版','立桥：填写「轉換保險經紀公司申請」表格'],callout:'各保司表格存放于：企微 → 微盘 → 资遇行政指引 → 转经纪公司指引'}]},
+  {id:'glossary',icon:'📖',title:'术语小词典（新人必看）',color:'#6366F1',steps:[{title:'身份与牌照类',desc:'入行首先要搞懂这些身份和牌照术语。',table:{headers:['术语','全称','通俗解释'],rows:[['IFA','Independent Financial Advisor','独立理财顾问，持有保险中介人资格考试牌照的正式顾问'],['TR','Technical Representative / 转介人','转介人，把客户介绍给IFA签单，无需持牌'],['Code','个人顾问代码','你在各保司系统的专属账号代码，签单必须用'],['商号','公司Broker Code','ZUU公司在各保司的统一代码，TR用商号签单'],['IA','Insurance Authority / 保监局','香港保险业监管局，负责发牌和监管'],['1号牌/3号牌','保险中介人牌照','1号=一般保险，3号=长期保险，入行必须同时申请'],['2号牌/5号牌','可选牌照','可后期补挂，不影响入职'],['4号牌','MPF强积金牌照','做强积金业务才需要，可选'],['CPD','Continuing Professional Development','持续专业培训学分，每年须修满15分'],['ILAS','Investment-Linked Assurance Scheme','投资连结保险计划，一种保险产品类型']]}},{title:'签单与合规类',desc:'签单过程中会遇到的专业术语。',table:{headers:['术语','全称','通俗解释'],rows:[['PI','Professional Investor / 专业投资者','资产超过800万港币的投资者，填表时需标注'],['CTC','Certified True Copy / 核实副本','在复印件上签名确认"此为真实副本"'],['MCVA','Mainland Chinese Visitors Assessment','内地访港投保人认证，AIA等保司要求'],['PA','Proposal/Application / 投保计划书','给客户看的保险方案计划书'],['Pending','待处理事项','保司核保时发现需要补充的材料或信息'],['POS','Post-sale / 保单售后','保单生效后的所有服务（续保、理赔、保全等）'],['CS','Customer Service / 签单协助','签单时的现场协助服务，首次签单赠送1次免费，之后按次收费从佣金扣除'],['ePOS/IPOS','电子投保系统','各保司的线上签单系统（AXA叫IPOS，其他叫ePOS）'],['回溯','Backdating','把保单生效日期提前到过去某天，仅重疾产品适用'],['冷静期','Cooling-off Period','保单生效后有一段时间可无条件退保']]}},{title:'工具与平台类',desc:'入职后会用到的各种工具和平台。',table:{headers:['术语','通俗解释'],rows:[['前进四','前进保险集团旗下的科技公司，提供企微和PoeS计划书等工具'],['LB / LifeBee','ZUU的核心业务App，产品对比+保费试算+签单管理'],['PoeS','前进四旗下的计划书制作工具，TR专用（替代LB计划书功能）'],['ZXcel / 蓝宝书','合规版产品数据工具，一页海报对比产品数据（IFA专属）'],['一站通','保险中介一站通系统，IA管的系统，用来缴费和申报CPD'],['企微','企业微信，内部沟通和工作的主要平台'],['微盘','企业微信内置的云盘，存放所有文件和资料'],['资通未来','保险考试刷题小程序，微信搜索即可找到'],['比原家办','ZUU旗下的家族办公室品牌，TR用比原名片']]}},{title:'团队与角色类',desc:'你会接触到的人和角色。',table:{headers:['术语','通俗解释'],rows:[['区伙','区域合伙人，团队的高级管理层，入职面谈由区伙进行'],['师父','你入职后指定的一对一带教人，负责指导你的业务学习'],['团队行政大主管','你所属团队的行政负责人（云澜找云妹，乾行找乾乾）'],['丝妹','前进四的对接人，负责开通前进四企微和PoeS权限'],['RM','Relationship Manager，保司的客户经理，可在保司群咨询产品问题']]}}]},
+  {id:'sos',icon:'🆘',title:'紧急求助指南',color:'#DC2626',steps:[{title:'遇到问题不知道找谁？按这个查',desc:'一图搞定：什么问题找什么人。',table:{headers:['你遇到的问题','找谁','怎么找'],rows:[['入职资料不齐/不确定','云妹(云澜) 或 乾乾(乾行)','在你的个人直营服务群@'],['挂牌进度/上牌问题','Summer / Tiya','在你的上牌服务群@'],['保司Code没开通/登不上','Anna 或 Ling','在你的个人直营服务群@'],['签单流程不懂/第一次签单','Bobo / Ray（审单辅导）','在签单群@'],['签单当天需要CS协助','Sherry / Sharon','在签单群@预约'],['签单后Pending怎么处理','Sherman / Alfred','在签单群@'],['保费对账问题','Carmen','在签单群@'],['佣金工资单有疑问','先找乾乾/云妹','回复邮件抄送乾乾/云妹'],['续保/保全/理赔','胖丁（续保）/ 三牧老师（理赔核保）','在个人直营服务群@'],['企微/工具/权限开不了','先找乾乾/云妹 → 再对接具体负责人','在个人直营服务群@'],['什么问题都不知道找谁','在企微智能客服群@ZEUS-GPT','自动回复引导你找到正确的人']]},callout:'核心原则：任何问题先在你的「个人直营服务群」问乾乾/云妹，他们会帮你对接正确的人。千万不要自己直接联系ZUU总部。'},{title:'常见卡点急救',desc:'新人最容易卡住的几个地方和解决办法。',materials:['🔴 卡点1：保司Code收到密码但登不上','→ 检查是否用了正确的邮箱（ZUU公司邮箱而非个人邮箱）','→ 立桥初始密码PASe2022!区分大小写','→ 超时未登录导致锁定 → 联系Anna/Ling重置','','🔴 卡点2：签单前发现Code还没开通','→ 紧急情况可用公司商号先签','→ 签单群@Anna说明情况，优先处理','','🔴 卡点3：客户已经来了但签单群还没建','→ 直接电话联系乾乾/云妹，说明"客户已到现场"','→ 乾乾会紧急建群并拉人','','🔴 卡点4：周末签单找不到人','→ 乾乾周末轮班时间：11:00 / 16:00 / 20:00','→ 当天签单响应1小时，第二天签单响应3小时','→ 实在联系不上 → 联系你的师父或区伙']}]},
+  {id:'faq',icon:'❓',title:'常见问题FAQ',color:'#64748B',steps:[{title:'签单时发现保司Code未开通怎么办？',desc:'立即在签单群@Anna或Ling，紧急情况可使用公司商号先行签单。部分保司（如恒安标准）开通时长较长，建议提前申请。'},{title:'Pending超过1个月怎么办？',desc:'保单投保申请会失效。请在签单群@Sherman或Alfred尽快处理。如涉及健康告知问题，可咨询三牧老师。'},{title:'佣金工资单有疑问怎么处理？',desc:'回复邮件并抄送乾乾/云妹 → 乾乾核查 → 如属实反馈ZUU。不要直接联系ZUU财务。'},{title:'TR转正为IFA后需要做什么？',desc:'通过考试后走IFA完整入职流程：入职材料→签署ZUU合约→挂牌审批→开通保司Code→获得IFA全部权限。之前hold的佣金差额将补发。'},{title:'企微工作台的工具在哪里找？',desc:'Zxcel、LB、资通未来需申请开通。其余数字工具箱已预装企业微信工作台，加入后一键唤醒。'},{title:'不知道找谁对接某个问题？',desc:'查看本百科「运营团队通讯录」，或在企微智能客服群@ZEUS-GPT自动回复。'},{title:'入职多久才能签第一单？',desc:'IFA：从入职到签第一单大约2-3个月（含考试+挂牌审批+培训）。TR：最快1-2周完成入职+培训后即可转介第一单。关键是尽快完成培训，不要等。'},{title:'签单前最容易忘记的事情是什么？',desc:'首次签单记得预约CS协助（首次免费）、AIA内地单须完成i学院测试、保司Code必须已激活（首次登录修改密码）、签单顺序必须先ZUU文件再保单文件。'},{title:'挂牌等待期间可以做什么？',desc:'参加培训课程（保险小白/港险小白等）、熟悉产品知识、学习签单流程、完成合规培训。这段时间是学习的黄金期！'},{title:'我可以同时在多家保司签单吗？',desc:'可以。IFA在各保司开通Code后，可根据客户需求选择最合适的保司产品。TR使用公司商号，各保司均可签。'}]}
+];
+
+// 文件路径 → 文档ID映射
+const FILE_MAP = {
+  'www.vtc.edu.hk':'report_vtc',
+  '1.挂牌':'doc_guapai',
+  '中英文合约模版':'doc_contract',
+  'ZUU直营新人一页通':'doc_welcome',
+  '4.保司账号开通':'doc_code',
+  'fd543.xetlk.com':'doc_training',
+  '投保预约表':'doc_booking',
+  '签单流程1.0':'doc_sign_flow',
+  'ZUU内部表格客户签字版':'doc_zuu_form',
+  '行政办公室领取':'doc_jiaodan',
+  'admin@zuuins.com.hk':'doc_renew',
+  'empf.org.hk':'doc_mpf',
+};
+
+// ========== 文档 ==========
+const DOCS = {
+  'report_vtc':{title:'VTC保险中介人资格考试',sections:[{title:'报考渠道',items:['官方网址：www.vtc.edu.hk/iro','在线报名系统','或亲临考试中心登记']},{title:'考试科目',items:['卷一：保险原理及实务','卷三：长期保险 或 一般保险（选一）']}]},
+  'doc_guapai':{title:'挂牌流程指引'},
+  'doc_contract':{title:'中英文合约模版'},
+  'doc_welcome':{title:'ZUU直营新人一页通'},
+  'doc_code':{title:'保司账号开通指引'},
+  'doc_training':{title:'培训课程'},
+  'doc_booking':{title:'投保预约表模板（Excel）'},
+  'doc_sign_flow':{title:'签单流程1.0'},
+  'doc_zuu_form':{title:'ZUU内部表格（客户签字版）'},
+  'doc_jiaodan':{title:'新生意交单表'},
+  'doc_renew':{title:'纸本保单代领'},
+  'doc_mpf':{title:'积金易/MPF注册指引'}
+};
+
+// ========== 状态管理 ==========
+var currentRole = null; // 'ifa' or 'tr'
+var currentInnerTab = 'flow'; // 'flow' or 'wiki'
+var userInfo = null;
+var completed = {};
+var expandedLights = {};
+var expandedTasks = {};
+var bmobReady = false;
+
+// ========== Bmob 云同步 ==========
+function showSync(state,text){
+  const badge=document.getElementById('syncBadge');
+  badge.style.display='flex';
+  badge.className='sync-badge'+(state==='syncing'?' syncing':state==='error'?' error':'');
+  document.getElementById('syncText').textContent=text||'已同步';
+}
+
+async function bmobCreate(data){
+  if(!bmobReady){showSync('ok','离线模式');return null;}
+  showSync('syncing','同步中...');
+  try{
+    const query=Bmob.Query('IFAProgress');
+    for(const [k,v] of Object.entries(data))query.set(k,v);
+    const res=await query.save();
+    if(res.id){showSync('ok','已同步');return res.id;}
+    showSync('error','同步失败');return null;
+  }catch(e){console.log('Bmob error:',e);showSync('error','连接失败');return null;}
+}
+
+async function bmobUpdate(objectId,data){
+  if(!bmobReady){showSync('ok','离线模式');return false;}
+  showSync('syncing','同步中...');
+  try{
+    const query=Bmob.Query('IFAProgress');
+    query.set('id',objectId);
+    for(const [k,v] of Object.entries(data))query.set(k,v);
+    await query.save();
+    showSync('ok','已同步');
+    return true;
+  }catch(e){showSync('error','同步失败');return false;}
+}
+
+async function bmobQuery(where){
+  if(!bmobReady)return[];
+  try{
+    const query=Bmob.Query('IFAProgress');
+    for(const [k,v] of Object.entries(where))query.equalTo(k,'==',v);
+    const res=await query.find();
+    return res||[];
+  }catch(e){return [];}
+}
+
+// ========== 渲染函数 ==========
+function selectRole(role){
+  currentRole = role;
+  currentInnerTab = 'flow';
+  try{localStorage.setItem('ifa_role', role);}catch(e){}
+
+  // Hide role selection, show inner tabs + content
+  document.getElementById('roleSelectPage').style.display = 'none';
+  document.getElementById('innerTabBar').style.display = 'flex';
+  document.getElementById('roleBackBtn').style.display = 'inline-flex';
+
+  // Update header
+  if(role === 'ifa'){
+    document.getElementById('headerTitle').textContent = 'IFA 持牌顾问指引';
+    document.getElementById('headerSub').textContent = '从考牌到展业，每一步清晰可查';
+  } else {
+    document.getElementById('headerTitle').textContent = '转介人 TR 指引';
+    document.getElementById('headerSub').textContent = '无需考牌，快速开展转介业务';
+  }
+
+  switchInnerTab('flow');
+}
+
+function goBackToRoleSelect(){
+  currentRole = null;
+  document.getElementById('roleSelectPage').style.display = 'block';
+  document.getElementById('innerTabBar').style.display = 'none';
+  document.getElementById('contentFlow').style.display = 'none';
+  document.getElementById('contentWiki').style.display = 'none';
+  document.getElementById('roleBackBtn').style.display = 'none';
+  document.getElementById('headerTitle').textContent = '云澜·乾行 点灯系统';
+  document.getElementById('headerSub').textContent = '从入职到展业，每一步清晰可查';
+}
+
+function switchInnerTab(tab){
+  currentInnerTab = tab;
+  document.getElementById('innerTabFlow').className = 'inner-tab-item'+(tab==='flow'?' active':'');
+  document.getElementById('innerTabWiki').className = 'inner-tab-item'+(tab==='wiki'?' active':'');
+  document.getElementById('contentFlow').style.display = tab==='flow'?'block':'none';
+  document.getElementById('contentWiki').style.display = tab==='wiki'?'block':'none';
+
+  if(tab==='flow'){
+    var data = currentRole==='ifa' ? IFA_LIGHTS : TR_LIGHTS;
+    renderLights(currentRole, data, 'flowLights');
+  } else {
+    renderWiki();
+  }
+}
+
+function renderLights(role, lightsData, containerId){
+  var html = '';
+  lightsData.forEach(function(light){
+    var totalTasks = light.tasks.length;
+    var doneTasks = 0;
+    light.tasks.forEach(function(task, ti){
+      if(completed[role+'_'+light.id+'_'+ti]) doneTasks++;
+    });
+    var allDone = doneTasks === totalTasks;
+    var isExpanded = expandedLights[role+'_'+light.id];
+
+    html += '<div class="light-card'+(allDone?' all-done':'')+(isExpanded?' open':'')+'" id="light_'+role+'_'+light.id+'">';
+    html += '<div class="light-header" onclick="toggleLight(\''+role+'\',\''+light.id+'\')">';
+    html += '<div class="light-bulb'+(allDone?' lit':'')+'" style="background:'+(allDone?'linear-gradient(135deg,#C9A84C,#F5E6B8)':light.color+'15')+';color:'+(allDone?'#fff':light.color)+'">'+light.icon+'</div>';
+    html += '<div class="light-progress"><div class="light-title">'+light.title+'</div>';
+    html += '<div class="light-prog-bar"><div class="light-prog-fill" style="width:'+(totalTasks?Math.round(doneTasks/totalTasks*100):0)+'%;background:'+light.color+'"></div></div></div>';
+    html += '<span class="light-count" style="color:'+light.color+'">'+doneTasks+'/'+totalTasks+'</span>';
+    html += '<span class="light-arrow">▼</span>';
+    html += '</div>';
+
+    html += '<div class="light-body">';
+    light.tasks.forEach(function(task, ti){
+      var key = role+'_'+light.id+'_'+ti;
+      var isDone = completed[key];
+      var isTaskExpanded = expandedTasks[key];
+
+      html += '<div class="task-row'+(isTaskExpanded?' expanded':'')+'">';
+      html += '<div class="task-check'+(isDone?' done':'')+'" onclick="event.stopPropagation();toggleTask(\''+role+'\',\''+light.id+'\','+ti+')">'+(isDone?'✓':'')+'</div>';
+      html += '<div class="task-info" onclick="expandTask(\''+role+'\',\''+light.id+'\','+ti+')">';
+      html += '<div class="task-name">'+task.title+'</div>';
+      html += '<div class="task-sub">'+task.subtitle+'</div>';
+      html += '</div>';
+      html += '<span class="task-arrow" onclick="expandTask(\''+role+'\',\''+light.id+'\','+ti+')">▶</span>';
+      html += '</div>';
+
+      html += '<div class="task-detail'+(isTaskExpanded?' show':'')+'" id="detail_'+key+'">';
+      html += renderSteps(task.steps);
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById(containerId).innerHTML = html;
+}
+
+var copyCounter = 0;
+function renderSteps(steps){
+  var html = '<div style="padding:12px 4px 16px">';
+  steps.forEach(function(step, si){
+    html += '<div class="step-card">';
+    html += '<div class="step-title"><span class="step-num">'+(si+1)+'</span>'+step.title+'</div>';
+    html += '<div class="step-desc">'+step.desc+'</div>';
+
+    if(step.tags && step.tags.length){
+      html += '<div class="info-row">';
+      step.tags.forEach(function(tag){
+        html += '<span class="tag tag-'+tag.type+'">'+tag.text+'</span>';
+      });
+      html += '</div>';
+    }
+
+    if(step.table){
+      html += '<table class="mini-table"><thead><tr>';
+      step.table.headers.forEach(function(h){html += '<th>'+h+'</th>';});
+      html += '</tr></thead><tbody>';
+      step.table.rows.forEach(function(row){
+        html += '<tr>';
+        row.forEach(function(cell){html += '<td>'+cell+'</td>';});
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    if(step.contacts && step.contacts.length){
+      step.contacts.forEach(function(c){
+        html += '<div class="contact-card">';
+        html += '<div class="contact-avatar" style="background:'+(c.color||'#EBF5FF')+'">'+c.avatar+'</div>';
+        html += '<div class="contact-info"><div class="contact-name">'+c.name+'</div><div class="contact-role">'+c.role+'</div></div>';
+        html += '</div>';
+      });
+    }
+
+    if(step.materials && step.materials.length){
+      html += '<div class="material-box"><div class="mb-title">📎 所需资料 / 操作项</div>';
+      step.materials.forEach(function(m){
+        if(m && m.trim()){
+          html += '<div class="material-item">'+m+'</div>';
+        } else {
+          html += '<div class="material-item" style="height:4px"></div>';
+        }
+      });
+      html += '</div>';
+    }
+
+    if(step.copyText){
+      var cid = 'cb_'+(copyCounter++);
+      html += '<div class="copy-box" id="'+cid+'">'+step.copyText.replace(/\\n/g,'\n')+'</div>';
+      html += '<button class="btn-copy" onclick="doCopy(this,\''+cid+'\')">📋 一键复制模板</button>';
+    }
+
+    if(step.file){
+      html += '<div class="file-link" onclick="openDoc(\''+step.file.path.replace(/'/g,"\\'")+'\')">';
+      html += '<span class="fp-icon">📂</span>';
+      html += '<div class="fp-text"><span class="fp-label">'+step.file.label+'</span><span class="fp-path">'+step.file.path+'</span></div>';
+      html += '<span style="color:#999">›</span>';
+      html += '</div>';
+    }
+
+    if(step.callout){
+      html += '<div class="callout">💡 '+step.callout+'</div>';
+    }
+
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderWiki(){
+  var html = '';
+  WIKI.forEach(function(wiki){
+    var isExpanded = expandedLights['wiki_'+wiki.id];
+    html += '<div class="wiki-card'+(isExpanded?' open':'')+'">';
+    html += '<div class="wiki-header" onclick="toggleWiki(\''+wiki.id+'\')">';
+    html += '<span class="wiki-icon">'+wiki.icon+'</span>';
+    html += '<span class="wiki-title">'+wiki.title+'</span>';
+    html += '<span class="wiki-arrow">▼</span>';
+    html += '</div>';
+
+    html += '<div class="wiki-body">';
+    html += renderSteps(wiki.steps);
+    html += '</div></div>';
+  });
+  document.getElementById('contentWiki').innerHTML = html;
+}
+
+// ========== 事件处理 ==========
+function toggleLight(role, lightId){
+  var key = role+'_'+lightId;
+  expandedLights[key] = !expandedLights[key];
+  switchInnerTab(currentInnerTab);
+}
+
+function toggleTask(role, lightId, taskIdx){
+  var key = role+'_'+lightId+'_'+taskIdx;
+  completed[key] = !completed[key];
+  saveCompleted();
+  switchInnerTab(currentInnerTab);
+}
+
+function expandTask(role, lightId, taskIdx){
+  var key = role+'_'+lightId+'_'+taskIdx;
+  expandedTasks[key] = !expandedTasks[key];
+  var detail = document.getElementById('detail_'+key);
+  if(detail){
+    detail.classList.toggle('show', !!expandedTasks[key]);
+  }
+  // 同步箭头方向
+  var rows = document.querySelectorAll('.task-row');
+  rows.forEach(function(r){ r.classList.remove('expanded'); });
+  for(var k in expandedTasks){
+    if(expandedTasks[k]){
+      var el = document.getElementById('detail_'+k);
+      if(el && el.previousElementSibling) el.previousElementSibling.classList.add('expanded');
+    }
+  }
+}
+
+function toggleWiki(wikiId){
+  var key = 'wiki_'+wikiId;
+  expandedLights[key] = !expandedLights[key];
+  renderWiki();
+}
+
+function doCopy(btn, boxId){
+  var box = document.getElementById(boxId);
+  if(!box) return;
+  var text = box.textContent;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      btn.classList.add('copied');
+      btn.innerHTML='✅ 已复制到剪贴板';
+      setTimeout(function(){btn.classList.remove('copied');btn.innerHTML='📋 一键复制模板';},2000);
+    }).catch(fallback);
+  } else { fallback(); }
+  function fallback(){
+    var ta=document.createElement('textarea');
+    ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+    document.body.appendChild(ta);ta.select();
+    try{document.execCommand('copy');btn.classList.add('copied');btn.innerHTML='✅ 已复制到剪贴板';setTimeout(function(){btn.classList.remove('copied');btn.innerHTML='📋 一键复制模板';},2000);}catch(e){}
+    document.body.removeChild(ta);
+  }
+}
+
+function openDoc(path){
+  // Check if it's a URL
+  if(path && (path.indexOf('http')===0 || path.indexOf('www.')===0)){
+    var url = path.indexOf('http')===0 ? path : 'https://'+path.split(' ')[0];
+    window.open(url,'_blank');
+    return;
+  }
+  // Otherwise show the path as info
+  alert('📂 文件位置：\n\n' + path + '\n\n请在企业微信中按此路径查找文件。');
+}
+
+function openSOS(){
+  document.getElementById('sosModal').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeSOS(){
+  document.getElementById('sosModal').classList.remove('show');
+  document.body.style.overflow='';
+}
+
+function saveCompleted(){
+  try{localStorage.setItem('ifa_completed',JSON.stringify(completed));}catch(e){}
+}
+
+function submitReg(){
+  var name = document.getElementById('regName').value.trim();
+  var phone = document.getElementById('regPhone').value.trim();
+  var team = document.getElementById('regTeam').value.trim();
+
+  if(!name || !phone || !team){
+    alert('请填写完整信息');
+    return;
+  }
+
+  userInfo = {name: name, phone: phone, team: team};
+  try{localStorage.setItem('ifa_user',JSON.stringify(userInfo));}catch(e){}
+
+  document.getElementById('regModal').style.display = 'none';
+  // Show role selection page (don't auto-select role)
+}
+
+function skipReg(){
+  document.getElementById('regModal').style.display = 'none';
+}
+
+// ========== 初始化 ==========
+(function init(){
+  try{
+    userInfo = JSON.parse(localStorage.getItem('ifa_user'))||null;
+    completed = JSON.parse(localStorage.getItem('ifa_completed'))||{};
+  }catch(e){}
+
+  if(!userInfo || !userInfo.name){
+    document.getElementById('regModal').style.display = 'flex';
+  }
+
+  // Check if user had previously selected a role
+  var savedRole = null;
+  try{savedRole = localStorage.getItem('ifa_role');}catch(e){}
+  if(savedRole === 'ifa' || savedRole === 'tr'){
+    selectRole(savedRole);
+  }
+  // Otherwise show role selection page (default state)
+})();
+</script>
+
+</body>
+</html>
